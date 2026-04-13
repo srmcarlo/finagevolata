@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Next.js
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# Supabase
+supabase/.temp/
+
+# Superpowers brainstorm sessions
+.superpowers/
+
+# Prisma
+packages/db/prisma/*.db
+
+# Turbo
+.turbo/
