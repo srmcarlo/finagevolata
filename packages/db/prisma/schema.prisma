@@ -1,0 +1,281 @@
+// packages/db/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CONSULTANT
+  COMPANY
+}
+
+enum CompanySize {
+  MICRO
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum GrantType {
+  FONDO_PERDUTO
+  FINANZIAMENTO_AGEVOLATO
+  CREDITO_IMPOSTA
+  GARANZIA
+}
+
+enum GrantStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  EXPIRED
+}
+
+enum PracticeStatus {
+  DRAFT
+  DOCUMENTS_PENDING
+  DOCUMENTS_REVIEW
+  READY
+  SUBMITTED
+  WON
+  LOST
+}
+
+enum ClickDayStatus {
+  NONE
+  REQUESTED
+  SENT_TO_PARTNER
+  SUBMITTED
+  RANKED
+  WON
+  LOST
+}
+
+enum DocumentStatus {
+  MISSING
+  UPLOADED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum DocumentCategory {
+  LEGAL
+  FINANCIAL
+  FISCAL
+  PROJECT
+  CERTIFICATION
+}
+
+enum InvitationStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+enum NotificationType {
+  DOCUMENT_EXPIRING
+  DOCUMENT_REQUESTED
+  GRANT_DEADLINE
+  PRACTICE_UPDATE
+  DOCUMENT_REVIEWED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          UserRole
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companyProfile    CompanyProfile?
+  consultantProfile ConsultantProfile?
+
+  // Consultant relationships
+  consultantInvitations ConsultantCompany[] @relation("ConsultantRelation")
+  // Company relationships
+  companyInvitations    ConsultantCompany[] @relation("CompanyRelation")
+
+  practicesAsConsultant Practice[]         @relation("PracticeConsultant")
+  practicesAsCompany    Practice[]         @relation("PracticeCompany")
+  createdGrants         Grant[]
+  reviewedDocuments     PracticeDocument[] @relation("DocumentReviewer")
+  notifications         Notification[]
+
+  @@map("users")
+}
+
+model CompanyProfile {
+  id               String      @id @default(cuid())
+  userId           String      @unique
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vatNumber        String      @unique
+  companyName      String
+  legalForm        String
+  atecoCode        String
+  atecoDescription String
+  province         String
+  region           String
+  employeeCount    CompanySize
+  annualRevenue    Decimal?
+  foundedAt        DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("company_profiles")
+}
+
+model ConsultantProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firmName        String?
+  specializations String[]
+  maxClients      Int      @default(20)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("consultant_profiles")
+}
+
+model Grant {
+  id                   String       @id @default(cuid())
+  title                String
+  description          String
+  issuingBody          String
+  grantType            GrantType
+  minAmount            Decimal?
+  maxAmount            Decimal?
+  deadline             DateTime?
+  openDate             DateTime?
+  hasClickDay          Boolean      @default(false)
+  clickDayDate         DateTime?
+  status               GrantStatus  @default(DRAFT)
+  eligibleAtecoCodes   String[]
+  eligibleRegions      String[]
+  eligibleCompanySizes CompanySize[]
+  sourceUrl            String?
+  approvedByAdmin      Boolean      @default(false)
+  createdById          String
+  createdBy            User         @relation(fields: [createdById], references: [id])
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  documentRequirements GrantDocumentRequirement[]
+  practices            Practice[]
+
+  @@map("grants")
+}
+
+model DocumentType {
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  description     String
+  validityDays    Int?
+  acceptedFormats String[]
+  maxSizeMb       Int              @default(10)
+  category        DocumentCategory
+  isStandard      Boolean          @default(true)
+
+  grantRequirements GrantDocumentRequirement[]
+  practiceDocuments PracticeDocument[]
+
+  @@map("document_types")
+}
+
+model GrantDocumentRequirement {
+  id             String       @id @default(cuid())
+  grantId        String
+  grant          Grant        @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  documentTypeId String
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+  isRequired     Boolean      @default(true)
+  notes          String?
+  order          Int          @default(0)
+
+  @@unique([grantId, documentTypeId])
+  @@map("grant_document_requirements")
+}
+
+model Practice {
+  id             String         @id @default(cuid())
+  grantId        String
+  grant          Grant          @relation(fields: [grantId], references: [id])
+  companyId      String
+  company        User           @relation("PracticeCompany", fields: [companyId], references: [id])
+  consultantId   String
+  consultant     User           @relation("PracticeConsultant", fields: [consultantId], references: [id])
+  status         PracticeStatus @default(DRAFT)
+  clickDayStatus ClickDayStatus @default(NONE)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  documents     PracticeDocument[]
+  notifications Notification[]
+
+  @@map("practices")
+}
+
+model PracticeDocument {
+  id              String         @id @default(cuid())
+  practiceId      String
+  practice        Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  documentTypeId  String
+  documentType    DocumentType   @relation(fields: [documentTypeId], references: [id])
+  status          DocumentStatus @default(MISSING)
+  rejectionReason String?
+  filePath        String?
+  fileName        String?
+  fileSize        Int?
+  uploadedAt      DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      User?          @relation("DocumentReviewer", fields: [reviewedById], references: [id])
+  expiresAt       DateTime?
+  version         Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([practiceId, documentTypeId])
+  @@map("practice_documents")
+}
+
+model ConsultantCompany {
+  id           String           @id @default(cuid())
+  consultantId String
+  consultant   User             @relation("ConsultantRelation", fields: [consultantId], references: [id])
+  companyId    String
+  company      User             @relation("CompanyRelation", fields: [companyId], references: [id])
+  status       InvitationStatus @default(PENDING)
+  invitedAt    DateTime         @default(now())
+  acceptedAt   DateTime?
+
+  @@unique([consultantId, companyId])
+  @@map("consultant_companies")
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         NotificationType
+  title        String
+  message      String
+  practiceId   String?
+  practice     Practice?        @relation(fields: [practiceId], references: [id])
+  isRead       Boolean          @default(false)
+  sentViaEmail Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+
+  @@map("notifications")
+}
