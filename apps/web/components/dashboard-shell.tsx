@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { NotificationsDropdown } from "./notifications-dropdown";
 
 const NAV_ITEMS = {
   CONSULTANT: [
@@ -47,12 +48,15 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
             </Link>
           ))}
         </nav>
+        <div className="mt-6 border-t pt-4">
+          <NotificationsDropdown />
+        </div>
         <form
           action={async () => {
             "use server";
             await signOut({ redirectTo: "/login" });
           }}
-          className="mt-auto pt-8"
+          className="mt-auto pt-4"
         >
           <button type="submit" className="text-sm text-gray-500 hover:text-gray-700">
             Esci
