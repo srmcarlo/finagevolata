@@ -1,0 +1,17 @@
+export const STANDARD_DOCUMENT_TYPES = [
+  { slug: "visura-camerale", name: "Visura Camerale", category: "LEGAL", validityDays: 180 },
+  { slug: "durc", name: "DURC", category: "LEGAL", validityDays: 120 },
+  { slug: "dsan", name: "DSAN", category: "LEGAL", validityDays: null },
+  { slug: "bilanci", name: "Bilanci Depositati", category: "FINANCIAL", validityDays: null },
+  { slug: "business-plan", name: "Business Plan", category: "PROJECT", validityDays: null },
+  { slug: "de-minimis", name: "Dichiarazione de minimis", category: "FISCAL", validityDays: null },
+  { slug: "preventivi", name: "Preventivi Fornitori", category: "PROJECT", validityDays: null },
+  { slug: "antimafia", name: "Dichiarazione Antimafia", category: "LEGAL", validityDays: null },
+  { slug: "antiriciclaggio", name: "Dichiarazione Antiriciclaggio", category: "LEGAL", validityDays: null },
+  { slug: "contabilita-separata", name: "Impegno Contabilità Separata", category: "FINANCIAL", validityDays: null },
+  { slug: "documento-identita", name: "Documento Identità", category: "LEGAL", validityDays: null },
+  { slug: "firma-digitale", name: "Firma Digitale", category: "LEGAL", validityDays: null },
+  { slug: "ateco", name: "Certificato ATECO", category: "LEGAL", validityDays: null },
+  { slug: "dichiarazioni-fiscali", name: "Dichiarazioni Fiscali", category: "FISCAL", validityDays: null },
+  { slug: "certificazioni", name: "Certificazioni Specifiche", category: "CERTIFICATION", validityDays: null },
+] as const;

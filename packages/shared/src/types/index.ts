@@ -1,0 +1,10 @@
+export type UserRole = "ADMIN" | "CONSULTANT" | "COMPANY";
+export type CompanySize = "MICRO" | "SMALL" | "MEDIUM" | "LARGE";
+export type GrantType = "FONDO_PERDUTO" | "FINANZIAMENTO_AGEVOLATO" | "CREDITO_IMPOSTA" | "GARANZIA";
+export type GrantStatus = "DRAFT" | "PUBLISHED" | "CLOSED" | "EXPIRED";
+export type PracticeStatus = "DRAFT" | "DOCUMENTS_PENDING" | "DOCUMENTS_REVIEW" | "READY" | "SUBMITTED" | "WON" | "LOST";
+export type ClickDayStatus = "NONE" | "REQUESTED" | "SENT_TO_PARTNER" | "SUBMITTED" | "RANKED" | "WON" | "LOST";
+export type DocumentStatus = "MISSING" | "UPLOADED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
+export type DocumentCategory = "LEGAL" | "FINANCIAL" | "FISCAL" | "PROJECT" | "CERTIFICATION";
+export type InvitationStatus = "PENDING" | "ACTIVE" | "REVOKED";
+export type NotificationType = "DOCUMENT_EXPIRING" | "DOCUMENT_REQUESTED" | "GRANT_DEADLINE" | "PRACTICE_UPDATE" | "DOCUMENT_REVIEWED";
