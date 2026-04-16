@@ -69,6 +69,31 @@ export async function getGrants() {
   return prisma.grant.findMany({ where: { status: "PUBLISHED", approvedByAdmin: true }, orderBy: { createdAt: "desc" } });
 }
 
+export async function getGrantsPaginated(page = 1, pageSize = 20) {
+  const session = await auth();
+  const role = (session?.user as any)?.role;
+
+  const where =
+    role === "ADMIN"
+      ? {}
+      : role === "CONSULTANT"
+      ? { OR: [{ status: "PUBLISHED" as const, approvedByAdmin: true }, { createdById: (session?.user as any).id }] }
+      : { status: "PUBLISHED" as const, approvedByAdmin: true };
+
+  const [items, total] = await prisma.$transaction([
+    prisma.grant.findMany({
+      where,
+      include: role === "ADMIN" ? { createdBy: true } : undefined,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.grant.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
 export async function getMatchingGrants(companyId: string) {
   const profile = await prisma.companyProfile.findUnique({ where: { userId: companyId } });
   if (!profile) return [];

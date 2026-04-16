@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { getPractices, createPractice } from "@/lib/actions/practices";
+import { getPracticesPaginated, createPractice } from "@/lib/actions/practices";
 import { getGrants } from "@/lib/actions/grants";
 import { getMyClients } from "@/lib/actions/companies";
 import { PracticeStatusBadge } from "@/components/practice-status-badge";
+import { Pagination } from "@/components/pagination";
 
 async function handleCreate(formData: FormData) {
   "use server";
@@ -11,9 +12,16 @@ async function handleCreate(formData: FormData) {
   revalidatePath("/consulente/pratiche");
 }
 
-export default async function ConsultantPratichePage() {
-  const [practices, grants, clients] = await Promise.all([
-    getPractices() as Promise<any[]>,
+export default async function ConsultantPratichePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+
+  const [{ items: practices, totalPages }, grants, clients] = await Promise.all([
+    getPracticesPaginated(page, 10),
     getGrants() as Promise<any[]>,
     getMyClients() as Promise<any[]>,
   ]);
@@ -135,6 +143,7 @@ export default async function ConsultantPratichePage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} basePath="/consulente/pratiche" />
     </div>
   );
 }

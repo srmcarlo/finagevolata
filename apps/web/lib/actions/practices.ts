@@ -84,6 +84,32 @@ export async function getPractice(id: string) {
   return practice;
 }
 
+export async function getPracticesPaginated(page = 1, pageSize = 10) {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  const role = (session?.user as any)?.role;
+  const where = role === "ADMIN" ? {} : role === "CONSULTANT" ? { consultantId: userId } : { companyId: userId };
+
+  const [items, total] = await prisma.$transaction([
+    prisma.practice.findMany({
+      where,
+      include: {
+        grant: true,
+        company: { include: { companyProfile: true } },
+        consultant: true,
+        _count: { select: { documents: true } },
+        documents: { select: { status: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.practice.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
 export async function updatePracticeStatus(practiceId: string, status: string) {
   const session = await auth();
   const userId = (session?.user as any)?.id;

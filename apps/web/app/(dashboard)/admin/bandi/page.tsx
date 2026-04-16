@@ -1,8 +1,9 @@
-import { getGrants, approveGrant } from "@/lib/actions/grants";
+import { getGrantsPaginated, approveGrant } from "@/lib/actions/grants";
 import { createGrantWithDocuments } from "@/lib/actions/grants-admin";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { GrantRagIndexer } from "@/components/grant-rag-indexer";
+import { Pagination } from "@/components/pagination";
 
 const GRANT_TYPE_LABELS: Record<string, string> = {
   FONDO_PERDUTO: "Fondo Perduto",
@@ -24,9 +25,16 @@ async function handleCreate(formData: FormData) {
   revalidatePath("/admin/bandi");
 }
 
-export default async function AdminGrantsPage() {
-  const [grants, documentTypes] = await Promise.all([
-    getGrants() as Promise<any[]>,
+export default async function AdminGrantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+
+  const [{ items: grants, totalPages }, documentTypes] = await Promise.all([
+    getGrantsPaginated(page, 20),
     prisma.documentType.findMany({ orderBy: { name: "asc" } }),
   ]);
 
@@ -209,6 +217,7 @@ export default async function AdminGrantsPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} basePath="/admin/bandi" />
     </div>
   );
 }

@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { getPractices } from "@/lib/actions/practices";
+import { getPracticesPaginated } from "@/lib/actions/practices";
 import { PracticeStatusBadge } from "@/components/practice-status-badge";
+import { Pagination } from "@/components/pagination";
 
-export default async function AziendaPratichePage() {
-  const practices = await getPractices() as any[];
+export default async function AziendaPratichePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const { items: practices, totalPages } = await getPracticesPaginated(page, 10);
 
   return (
     <div>
@@ -67,6 +74,7 @@ export default async function AziendaPratichePage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} basePath="/azienda/pratiche" />
     </div>
   );
 }
