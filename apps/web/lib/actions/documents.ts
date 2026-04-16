@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createServerSupabase } from "@/lib/supabase";
 import { documentReviewSchema } from "@finagevolata/shared";
-import { sendDocumentUploadedEmail } from "@/lib/email";
+import { sendDocumentUploadedEmail, sendDocumentReviewedEmail } from "@/lib/email";
 import { validateDocumentWithAI } from "@/lib/services/ai-validator";
 
 
@@ -60,6 +60,10 @@ export async function uploadDocument(practiceDocId: string, formData: FormData) 
     expiresAt = new Date(Date.now() + practiceDoc.documentType.validityDays * 86400000);
   }
 
+  const consultantId = practiceDoc.practice.consultantId;
+  const companyName = practiceDoc.practice.company.companyProfile?.companyName ?? practiceDoc.practice.company.name;
+  const docName = practiceDoc.documentType.name;
+
   await prisma.$transaction([
     prisma.practiceDocument.update({
       where: { id: practiceDocId },
@@ -79,10 +83,25 @@ export async function uploadDocument(practiceDocId: string, formData: FormData) 
         practiceId: practiceDoc.practiceId,
         actorId: userId,
         type: "DOCUMENT_UPLOADED",
-        detail: `Ha caricato "${practiceDoc.documentType.name}"`,
+        detail: `Ha caricato "${docName}"`,
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: consultantId,
+        type: "DOCUMENT_REQUESTED",
+        title: "Nuovo documento caricato",
+        message: `${companyName} ha caricato "${docName}". Revisiona il documento.`,
+        practiceId: practiceDoc.practiceId,
       },
     }),
   ]);
+
+  // Email al consulente (fuori dalla transaction — fallimento non blocca upload)
+  const consultant = practiceDoc.practice.consultant;
+  sendDocumentUploadedEmail(consultant.email, companyName, docName).catch((e) =>
+    console.error("[Email] Upload notification failed:", e)
+  );
 
   return { success: true };
 }
@@ -104,7 +123,7 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
 
   const practiceDoc = await prisma.practiceDocument.findUnique({
     where: { id: practiceDocId },
-    include: { practice: true, documentType: true },
+    include: { practice: { include: { company: true } }, documentType: true },
   });
   if (!practiceDoc || practiceDoc.practice.consultantId !== userId) {
     return { error: "Documento non trovato" };
@@ -114,6 +133,8 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
   }
 
   const isApproved = parsed.data.status === "APPROVED";
+  const companyId = practiceDoc.practice.companyId;
+  const docName = practiceDoc.documentType.name;
 
   await prisma.$transaction([
     prisma.practiceDocument.update({
@@ -131,11 +152,28 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
         actorId: userId,
         type: isApproved ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
         detail: isApproved
-          ? `Ha approvato "${practiceDoc.documentType.name}"`
-          : `Ha rifiutato "${practiceDoc.documentType.name}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}`,
+          ? `Ha approvato "${docName}"`
+          : `Ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}`,
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: companyId,
+        type: "DOCUMENT_REVIEWED",
+        title: isApproved ? `Documento approvato: ${docName}` : `Documento rifiutato: ${docName}`,
+        message: isApproved
+          ? `Il consulente ha approvato "${docName}".`
+          : `Il consulente ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}. Carica una versione corretta.`,
+        practiceId: practiceDoc.practiceId,
       },
     }),
   ]);
+
+  // Email all'azienda (fuori dalla transaction — fallimento non blocca revisione)
+  const companyEmail = practiceDoc.practice.company.email;
+  sendDocumentReviewedEmail(companyEmail, docName, isApproved, parsed.data.rejectionReason).catch((e) =>
+    console.error("[Email] Review notification failed:", e)
+  );
 
   return { success: true };
 }

@@ -49,6 +49,24 @@ export async function sendDocumentUploadedEmail(consultantEmail: string, company
 }
 
 /**
+ * Notifica l'azienda dell'esito della revisione documento da parte del consulente
+ */
+export async function sendDocumentReviewedEmail(
+  companyEmail: string,
+  documentName: string,
+  isApproved: boolean,
+  rejectionReason?: string
+) {
+  const subject = isApproved
+    ? `[FinAgevolata] Documento approvato: ${documentName}`
+    : `[FinAgevolata] Documento rifiutato: ${documentName}`;
+  const text = isApproved
+    ? `Il documento "${documentName}" è stato approvato dal tuo consulente. Accedi al portale per vedere lo stato della tua pratica.`
+    : `Il documento "${documentName}" è stato rifiutato dal tuo consulente.${rejectionReason ? `\n\nMotivo: ${rejectionReason}` : ""}\n\nAccedi al portale per caricare una versione corretta.`;
+  return sendEmail({ to: companyEmail, subject, text });
+}
+
+/**
  * Notifica l'azienda che un bando scade a breve
  */
 export async function sendGrantDeadlineAlert(companyEmail: string, grantTitle: string, deadline: string) {
