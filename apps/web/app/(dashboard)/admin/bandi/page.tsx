@@ -1,5 +1,8 @@
-import { getGrants, approveGrant, createGrant } from "@/lib/actions/grants";
+import { getGrants, approveGrant } from "@/lib/actions/grants";
+import { createGrantWithDocuments } from "@/lib/actions/grants-admin";
+import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { GrantRagIndexer } from "@/components/grant-rag-indexer";
 
 const GRANT_TYPE_LABELS: Record<string, string> = {
   FONDO_PERDUTO: "Fondo Perduto",
@@ -17,12 +20,15 @@ async function handleApprove(formData: FormData) {
 
 async function handleCreate(formData: FormData) {
   "use server";
-  await createGrant(formData);
+  await createGrantWithDocuments(formData);
   revalidatePath("/admin/bandi");
 }
 
 export default async function AdminGrantsPage() {
-  const grants = await getGrants() as any[];
+  const [grants, documentTypes] = await Promise.all([
+    getGrants() as Promise<any[]>,
+    prisma.documentType.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   return (
     <div>
@@ -75,7 +81,7 @@ export default async function AdminGrantsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Massimo (€)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Massimo (&euro;)</label>
             <input
               name="maxAmount"
               type="number"
@@ -119,6 +125,26 @@ export default async function AdminGrantsPage() {
             />
             <label htmlFor="hasClickDay" className="text-sm font-medium text-gray-700">Click Day</label>
           </div>
+
+          {/* Document requirements selection */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Documenti richiesti</label>
+            <div className="grid grid-cols-2 gap-2 p-4 border rounded-md bg-gray-50 max-h-60 overflow-y-auto">
+              {documentTypes.map((dt) => (
+                <label key={dt.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="documentTypeIds"
+                    value={dt.id}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <span className="text-gray-700">{dt.name}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Seleziona i documenti che le aziende dovranno caricare per questo bando</p>
+          </div>
+
           <div className="col-span-2">
             <button
               type="submit"
@@ -170,12 +196,13 @@ export default async function AdminGrantsPage() {
                       <input type="hidden" name="grantId" value={grant.id} />
                       <button
                         type="submit"
-                        className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
                       >
                         Approva
                       </button>
                     </form>
                   )}
+                  <GrantRagIndexer grantId={grant.id} grantTitle={grant.title} />
                 </td>
               </tr>
             ))}

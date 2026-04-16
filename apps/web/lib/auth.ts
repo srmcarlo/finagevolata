@@ -31,6 +31,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    {
+      id: "spid",
+      name: "SPID",
+      type: "oidc",
+      issuer: "https://mock-spid.it", // Placeholder per demo
+      clientId: "finagevolata-app",
+      clientSecret: "mock-secret",
+      authorization: { params: { scope: "openid profile email" } },
+      profile(profile: any) {
+        return {
+          id: profile.sub,
+          name: profile.name || `${profile.given_name} ${profile.family_name}`,
+          email: profile.email,
+          role: "COMPANY", // Default per SPID in questo contesto
+        };
+      },
+      // In sviluppo non abbiamo un vero server OIDC, quindi usiamo mock
+      // Per la demo non serve configurazione reale
+    },
   ],
   callbacks: {
     async jwt({ token, user }) {

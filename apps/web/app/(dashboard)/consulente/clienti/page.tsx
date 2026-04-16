@@ -1,5 +1,10 @@
 import { getMyClients, inviteCompany } from "@/lib/actions/companies";
 
+async function handleInvite(formData: FormData): Promise<void> {
+  "use server";
+  await inviteCompany(formData);
+}
+
 export default async function ClientiPage() {
   const clients = await getMyClients();
 
@@ -11,7 +16,7 @@ export default async function ClientiPage() {
 
       <div className="rounded-lg border bg-white p-6 mb-6">
         <h2 className="text-sm font-medium text-gray-700 mb-3">Invita un&apos;azienda</h2>
-        <form action={inviteCompany} className="flex gap-3">
+        <form action={handleInvite} className="flex gap-3">
           <input name="companyEmail" type="email" required placeholder="email@azienda.it"
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" />
           <button type="submit"

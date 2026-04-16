@@ -1,3 +1,5 @@
+import { ViewDocumentButton } from "./view-document-button";
+
 const DOC_STATUS_MAP: Record<string, { label: string; className: string }> = {
   MISSING: { label: "Mancante", className: "bg-red-100 text-red-700" },
   UPLOADED: { label: "Caricato", className: "bg-blue-100 text-blue-700" },
@@ -8,7 +10,7 @@ const DOC_STATUS_MAP: Record<string, { label: string; className: string }> = {
 
 interface PracticeDoc {
   id: string; status: string; rejectionReason: string | null; fileName: string | null;
-  expiresAt: Date | null; version: number;
+  filePath: string | null; expiresAt: Date | null; version: number;
   documentType: { name: string; slug: string; category: string };
 }
 
@@ -35,7 +37,10 @@ export function DocumentChecklist({ documents }: { documents: PracticeDoc[] }) {
                 {doc.rejectionReason && <p className="text-xs text-red-600 mt-1">Motivo: {doc.rejectionReason}</p>}
                 {isExpiringSoon && doc.expiresAt && <p className="text-xs text-amber-600 mt-1">Scade il {new Date(doc.expiresAt).toLocaleDateString("it-IT")}</p>}
               </div>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${config.className}`}>{config.label}</span>
+              <div className="flex items-center gap-3">
+                {doc.filePath && <ViewDocumentButton docId={doc.id} />}
+                <span className={`rounded-full px-2 py-1 text-xs font-medium ${config.className}`}>{config.label}</span>
+              </div>
             </div>
           );
         })}

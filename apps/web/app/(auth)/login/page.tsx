@@ -49,6 +49,23 @@ export default function LoginPage() {
             Accedi
           </button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300"></span>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">Oppure</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => signIn("spid")}
+          className="w-full flex items-center justify-center gap-3 rounded-md border border-blue-600 px-4 py-2 text-blue-600 font-bold hover:bg-blue-50 transition"
+        >
+          <img src="https://upload.wikimedia.org/wikipedia/commons/1/11/SPID_logo.svg" alt="SPID" className="h-5" />
+          Entra con SPID
+        </button>
         <p className="text-center text-sm text-gray-500">
           Non hai un account?{" "}
           <a href="/register" className="text-blue-600 hover:underline">Registrati</a>

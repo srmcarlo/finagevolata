@@ -4,6 +4,16 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { practiceCreateSchema } from "@finagevolata/shared";
 
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Bozza",
+  DOCUMENTS_PENDING: "Documenti in attesa",
+  DOCUMENTS_REVIEW: "In revisione",
+  READY: "Pronta per invio",
+  SUBMITTED: "Inviata",
+  WON: "Vinta",
+  LOST: "Persa",
+};
+
 export async function createPractice(formData: FormData) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
@@ -36,6 +46,13 @@ export async function createPractice(formData: FormData) {
           documentTypeId: req.documentTypeId, status: "MISSING",
           expiresAt: req.documentType.validityDays ? new Date(Date.now() + req.documentType.validityDays * 86400000) : null,
         })),
+      },
+      activities: {
+        create: {
+          actorId: userId,
+          type: "PRACTICE_CREATED",
+          detail: `Pratica creata per il bando "${grant.title}"`,
+        },
       },
     },
   });
@@ -74,6 +91,21 @@ export async function updatePracticeStatus(practiceId: string, status: string) {
   if (role !== "CONSULTANT") return { error: "Non autorizzato" };
   const practice = await prisma.practice.findUnique({ where: { id: practiceId } });
   if (!practice || practice.consultantId !== userId) return { error: "Pratica non trovata" };
-  await prisma.practice.update({ where: { id: practiceId }, data: { status: status as any } });
+
+  const oldLabel = STATUS_LABELS[practice.status] || practice.status;
+  const newLabel = STATUS_LABELS[status] || status;
+
+  await prisma.$transaction([
+    prisma.practice.update({ where: { id: practiceId }, data: { status: status as any } }),
+    prisma.practiceActivity.create({
+      data: {
+        practiceId,
+        actorId: userId,
+        type: "STATUS_CHANGED",
+        detail: `Stato cambiato da "${oldLabel}" a "${newLabel}"`,
+      },
+    }),
+  ]);
+
   return { success: true };
 }

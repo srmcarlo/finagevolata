@@ -1,5 +1,10 @@
 import { getNotifications, getUnreadCount, markAllAsRead } from "@/lib/actions/notifications";
 
+async function handleMarkAllRead(): Promise<void> {
+  "use server";
+  await markAllAsRead();
+}
+
 export async function NotificationsDropdown() {
   const [notifications, unreadCount] = await Promise.all([
     getNotifications(),
@@ -26,7 +31,7 @@ export async function NotificationsDropdown() {
             </div>
           ))}
           {unreadCount > 0 && (
-            <form action={markAllAsRead}>
+            <form action={handleMarkAllRead}>
               <button type="submit" className="text-xs text-blue-600 hover:underline">
                 Segna tutto come letto
               </button>

@@ -1,12 +1,14 @@
 // packages/db/prisma/schema.prisma
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 enum UserRole {
@@ -109,6 +111,8 @@ model User {
   createdGrants         Grant[]
   reviewedDocuments     PracticeDocument[] @relation("DocumentReviewer")
   notifications         Notification[]
+  sentMessages          PracticeMessage[]
+  activities            PracticeActivity[]
 
   @@map("users")
 }
@@ -127,6 +131,7 @@ model CompanyProfile {
   employeeCount    CompanySize
   annualRevenue    Decimal?
   foundedAt        DateTime?
+  embedding        Unsupported("vector(768)")?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -166,13 +171,26 @@ model Grant {
   approvedByAdmin      Boolean      @default(false)
   createdById          String
   createdBy            User         @relation(fields: [createdById], references: [id])
+  embedding            Unsupported("vector(768)")?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
   documentRequirements GrantDocumentRequirement[]
   practices            Practice[]
+  chunks               GrantChunk[]
 
   @@map("grants")
+}
+
+model GrantChunk {
+  id        String                      @id @default(cuid())
+  grantId   String
+  grant     Grant                       @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  content   String
+  embedding Unsupported("vector(768)")?
+  createdAt DateTime                    @default(now())
+
+  @@map("grant_chunks")
 }
 
 model DocumentType {
@@ -222,6 +240,8 @@ model Practice {
 
   documents     PracticeDocument[]
   notifications Notification[]
+  messages      PracticeMessage[]
+  activities    PracticeActivity[]
 
   @@map("practices")
 }
@@ -278,4 +298,41 @@ model Notification {
   createdAt    DateTime         @default(now())
 
   @@map("notifications")
+}
+
+// === CHAT & TIMELINE ===
+
+model PracticeMessage {
+  id         String   @id @default(cuid())
+  practiceId String
+  practice   Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id])
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@map("practice_messages")
+}
+
+enum ActivityType {
+  PRACTICE_CREATED
+  STATUS_CHANGED
+  DOCUMENT_UPLOADED
+  DOCUMENT_APPROVED
+  DOCUMENT_REJECTED
+  MESSAGE_SENT
+  CLICKDAY_EXPORT
+}
+
+model PracticeActivity {
+  id         String       @id @default(cuid())
+  practiceId String
+  practice   Practice     @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User         @relation(fields: [actorId], references: [id])
+  type       ActivityType
+  detail     String
+  createdAt  DateTime     @default(now())
+
+  @@map("practice_activities")
 }
