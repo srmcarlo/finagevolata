@@ -352,10 +352,12 @@ Aggiungere a `turbo.json` env list.
 - **Cookie banner avanzato (OneTrust/Cookiebot)** — banner minimale only-essential basta finché non aggiungiamo tracking non-essenziale
 - **Testimonial / case study reali** — esplicitamente NO testimonial finti; se reali arriveranno dopo lancio, da aggiungere in iterazione
 
-## 11. Open Questions
+## 11. Decisions (resolved)
 
-- [ ] Logo finale FinAgevolata disponibile? Altrimenti placeholder wordmark
-- [ ] Dominio produzione (`finagevolata.it`?) — serve per URL canonical e email
-- [ ] Email `info@finagevolata.it` configurata su Resend domain? Verificare DNS
-- [ ] Testo legale privacy/termini: chi scrive? (consigliato template base + review legale prima del go-live)
-- [ ] Link WhatsApp business su `/contatti` attivabile? (richiede numero verificato)
+- **Logo:** wordmark SVG placeholder creato in `components/marketing/logo.tsx` — testo "FinAgevolata" con stile tipografico coerente (Inter bold + accent color su syllaba "Fin"). Rimpiazzabile quando logo reale disponibile.
+- **Dominio test/staging:** `axentraitalia.cloud` (già disponibile, gratuito 1 anno utente). Usato per deploy preview e test. Brand del prodotto resta "FinAgevolata" — dominio produzione finale da scegliere in futuro.
+- **Email destinazione contact form:** `axentra.italia@gmail.com` (utente). `CONTACT_EMAIL_TO` env var.
+- **Email FROM (Resend):** `onboarding@resend.dev` (Resend sandbox domain — funziona senza DNS setup). Quando DNS di `axentraitalia.cloud` configurato su Resend, passare a `noreply@axentraitalia.cloud`.
+- **URL canonical nei metadata:** `https://axentraitalia.cloud` finché dominio finale non deciso.
+- **Legal:** template base inline nelle pagine con commento `{/* TODO: legal review prima del go-live */}`. Go-live pubblico richiede review legale.
+- **WhatsApp:** link diretto `https://api.whatsapp.com/send/?phone=393459938680` su `/contatti` — numero `+39 345 993 8680`.
