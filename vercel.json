@@ -1,6 +1,6 @@
 {
+  "buildCommand": "turbo run build --filter=@finagevolata/web",
   "outputDirectory": "apps/web/.next",
-  "buildCommand": "turbo run build",
-  "framework": "nextjs",
-  "installCommand": "pnpm install"
+  "installCommand": "pnpm install",
+  "framework": null
 }
