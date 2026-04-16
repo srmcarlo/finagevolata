@@ -6,7 +6,8 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "postinstall": "pnpm --filter @finagevolata/db prisma:generate"
   },
   "devDependencies": {
     "prettier": "^3.4.0",

@@ -138,7 +138,7 @@ export default async function AdminGrantsPage({
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Documenti richiesti</label>
             <div className="grid grid-cols-2 gap-2 p-4 border rounded-md bg-gray-50 max-h-60 overflow-y-auto">
-              {documentTypes.map((dt) => (
+              {documentTypes.map((dt: { id: string; name: string }) => (
                 <label key={dt.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
