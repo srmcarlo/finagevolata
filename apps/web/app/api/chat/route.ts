@@ -2,16 +2,45 @@
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { searchGrantChunks } from "@/lib/services/rag";
 
 export const maxDuration = 30;
 
+// In-memory rate limiter: 20 requests per user per minute
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 20;
+const WINDOW_MS = 60_000;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(req: Request) {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
+    return new Response("Non autorizzato", { status: 401 });
+  }
+
+  if (!checkRateLimit(userId)) {
+    return new Response("Troppo richieste. Riprova tra un minuto.", { status: 429 });
+  }
+
   const { messages, practiceId } = await req.json();
 
   // 1. Recupera il contesto della pratica (bando + azienda)
-  const practice = await prisma.practice.findUnique({
-    where: { id: practiceId },
+  // Filtra per userId per evitare accesso a pratiche altrui
+  const practice = await prisma.practice.findFirst({
+    where: { id: practiceId, OR: [{ companyId: userId }, { consultantId: userId }] },
     include: {
       grant: {
         include: { documentRequirements: { include: { documentType: true } } },
