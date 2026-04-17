@@ -2,7 +2,11 @@
 
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { registerSchema } from "@finagevolata/shared";
+import { registerSchema, type PlanSlug } from "@finagevolata/shared";
+
+function slugToPlanEnum(slug: PlanSlug): "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO" {
+  return slug.toUpperCase().replace(/-/g, "_") as "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO";
+}
 
 export async function registerUser(formData: FormData) {
   const raw = {
@@ -10,6 +14,7 @@ export async function registerUser(formData: FormData) {
     name: formData.get("name") as string,
     password: formData.get("password") as string,
     role: formData.get("role") as string,
+    plan: (formData.get("plan") as string | null) || undefined,
   };
 
   const parsed = registerSchema.safeParse(raw);
@@ -32,6 +37,7 @@ export async function registerUser(formData: FormData) {
       name: parsed.data.name,
       password: hashedPassword,
       role: parsed.data.role,
+      plan: parsed.data.plan ? slugToPlanEnum(parsed.data.plan) : "FREE",
     },
   });
 
