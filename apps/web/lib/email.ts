@@ -76,3 +76,55 @@ export async function sendGrantDeadlineAlert(companyEmail: string, grantTitle: s
         text: `Il bando "${grantTitle}" scade il ${deadline}. Completa il caricamento dei documenti per non perdere l'opportunità.`
     });
 }
+
+export async function sendClientInviteEmail({
+  to,
+  consultantName,
+  link,
+}: {
+  to: string;
+  consultantName: string;
+  link: string;
+}) {
+  return sendEmail({
+    to,
+    subject: `${consultantName} ti ha invitato su FinAgevolata`,
+    text: `Ciao,
+
+${consultantName} ti ha invitato a collaborare su FinAgevolata — la piattaforma dove consulente e azienda lavorano insieme sui bandi di finanza agevolata.
+
+Clicca il link per creare l'account (scade in 7 giorni):
+${link}
+
+Se non conosci ${consultantName}, ignora questa email.
+`,
+  });
+}
+
+export async function sendWelcomeEmail({
+  to,
+  name,
+  role,
+}: {
+  to: string;
+  name: string;
+  role: "COMPANY" | "CONSULTANT";
+}) {
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://axentraitalia.cloud";
+  const subject =
+    role === "CONSULTANT"
+      ? "Benvenuto su FinAgevolata, consulente"
+      : "Benvenuto su FinAgevolata";
+  const ctaUrl =
+    role === "CONSULTANT" ? `${baseUrl}/onboarding/consulente` : `${baseUrl}/onboarding`;
+  const ctaLabel = role === "CONSULTANT" ? "Configura lo studio" : "Completa il profilo";
+  const text = `Ciao ${name},
+
+Grazie per esserti registrato su FinAgevolata.
+
+Ti bastano 2 minuti per finire il setup: ${ctaLabel} → ${ctaUrl}
+
+Se hai domande, rispondi a questa email.
+`;
+  return sendEmail({ to, subject, text });
+}
