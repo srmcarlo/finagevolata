@@ -96,15 +96,17 @@ enum PlanType {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  password      String
-  role          UserRole
-  plan          PlanType  @default(FREE)
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  name                    String
+  password                String
+  role                    UserRole
+  plan                    PlanType  @default(FREE)
+  emailVerified           DateTime?
+  onboardingCompletedAt   DateTime?
+  subscribedToGrantAlerts Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   companyProfile    CompanyProfile?
   consultantProfile ConsultantProfile?
@@ -113,6 +115,8 @@ model User {
   consultantInvitations ConsultantCompany[] @relation("ConsultantRelation")
   // Company relationships
   companyInvitations    ConsultantCompany[] @relation("CompanyRelation")
+
+  clientInvitesSent ClientInvite[] @relation("ConsultantInvites")
 
   practicesAsConsultant Practice[]         @relation("PracticeConsultant")
   practicesAsCompany    Practice[]         @relation("PracticeCompany")
@@ -343,6 +347,31 @@ model PracticeActivity {
   createdAt  DateTime     @default(now())
 
   @@map("practice_activities")
+}
+
+model ClientInvite {
+  id               String       @id @default(cuid())
+  consultantId     String
+  consultant       User         @relation("ConsultantInvites", fields: [consultantId], references: [id], onDelete: Cascade)
+  email            String
+  token            String       @unique
+  expiresAt        DateTime
+  status           InviteStatus @default(PENDING)
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  createdAt        DateTime     @default(now())
+
+  @@index([consultantId])
+  @@index([token])
+  @@index([status, expiresAt])
+  @@map("client_invites")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
 }
 
 model ContactLead {
