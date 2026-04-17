@@ -8,6 +8,11 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const role = (req.auth?.user as any)?.role;
 
+  // Public invite acceptance — allow unauthenticated
+  if (pathname.startsWith("/invite/")) {
+    return NextResponse.next();
+  }
+
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
   const isOnboarding = pathname.startsWith("/onboarding");
   const isDashboard =
@@ -35,14 +40,15 @@ export default auth((req) => {
     return NextResponse.redirect(new URL(redirect, req.url));
   }
 
-  // Allow logged-in COMPANY users to access onboarding
-  if (isOnboarding && isLoggedIn && role === "COMPANY") {
+  // Onboarding: allow COMPANY + CONSULTANT (each wizard enforces role internally)
+  if (isOnboarding) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (role !== "COMPANY" && role !== "CONSULTANT") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
     return NextResponse.next();
-  }
-
-  // Redirect non-COMPANY or non-logged-in users away from onboarding
-  if (isOnboarding && (!isLoggedIn || role !== "COMPANY")) {
-    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   // Dashboard requires login

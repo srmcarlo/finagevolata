@@ -2,6 +2,7 @@
 
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/email";
 import { registerSchema, type PlanSlug } from "@finagevolata/shared";
 
 function slugToPlanEnum(slug: PlanSlug): "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO" {
@@ -31,7 +32,7 @@ export async function registerUser(formData: FormData) {
 
   const hashedPassword = await hash(parsed.data.password, 12);
 
-  await prisma.user.create({
+  const created = await prisma.user.create({
     data: {
       email: parsed.data.email,
       name: parsed.data.name,
@@ -40,6 +41,13 @@ export async function registerUser(formData: FormData) {
       plan: parsed.data.plan ? slugToPlanEnum(parsed.data.plan) : "FREE",
     },
   });
+
+  // Non-blocking: welcome email failure does not fail signup
+  sendWelcomeEmail({
+    to: created.email,
+    name: created.name,
+    role: created.role as "COMPANY" | "CONSULTANT",
+  }).catch((err) => console.error("Welcome email failed:", err));
 
   return { success: true };
 }
