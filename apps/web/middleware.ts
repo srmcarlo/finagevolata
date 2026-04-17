@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
+const PUBLIC_PATHS = new Set(["/", "/features", "/prezzi", "/contatti", "/privacy", "/termini", "/cookie"]);
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
@@ -8,20 +10,32 @@ export default auth((req) => {
 
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
   const isOnboarding = pathname.startsWith("/onboarding");
-  const isDashboard = pathname.startsWith("/consulente") ||
+  const isDashboard =
+    pathname.startsWith("/consulente") ||
     pathname.startsWith("/azienda") ||
     pathname.startsWith("/admin");
+  const isPublicMarketing = PUBLIC_PATHS.has(pathname);
 
-  // Logged in users on auth pages → redirect to dashboard
-  // COMPANY goes to "/" which checks onboarding status
+  // Logged-in users on marketing homepage "/" → redirect to dashboard
+  if (pathname === "/" && isLoggedIn) {
+    const redirect =
+      role === "CONSULTANT" ? "/consulente" :
+      role === "ADMIN" ? "/admin" :
+      role === "COMPANY" ? "/azienda" :
+      "/login";
+    return NextResponse.redirect(new URL(redirect, req.url));
+  }
+
+  // Logged-in users on auth pages → redirect to dashboard
   if (isAuthPage && isLoggedIn) {
-    const redirect = role === "CONSULTANT" ? "/consulente" :
-      role === "COMPANY" ? "/" :
+    const redirect =
+      role === "CONSULTANT" ? "/consulente" :
+      role === "COMPANY" ? "/azienda" :
       role === "ADMIN" ? "/admin" : "/";
     return NextResponse.redirect(new URL(redirect, req.url));
   }
 
-  // Allow logged in COMPANY users to access onboarding
+  // Allow logged-in COMPANY users to access onboarding
   if (isOnboarding && isLoggedIn && role === "COMPANY") {
     return NextResponse.next();
   }
@@ -49,9 +63,14 @@ export default auth((req) => {
     }
   }
 
+  // Public marketing paths: always allow
+  if (isPublicMarketing) {
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|opengraph-image|sitemap.xml|robots.txt).*)"],
 };
