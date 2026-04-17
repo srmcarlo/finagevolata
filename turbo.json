@@ -14,7 +14,8 @@
         "SUPABASE_SERVICE_ROLE_KEY",
         "RESEND_API_KEY",
         "EMAIL_FROM",
-        "GOOGLE_GENERATIVE_AI_API_KEY"
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "CONTACT_EMAIL_TO"
       ]
     },
     "dev": {
