@@ -34,10 +34,10 @@ export async function saveCompanyProfile(formData: FormData) {
   return { success: true };
 }
 
-export async function saveInterests(formData: FormData) {
+export async function saveInterests(formData: FormData): Promise<void> {
   const session = await auth();
   const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { error: "Non autorizzato" };
+  if (!userId) throw new Error("Non autorizzato");
 
   const subscribe = formData.get("subscribe") === "on";
 
@@ -89,10 +89,10 @@ export async function saveConsultantProfile(formData: FormData) {
   return { success: true };
 }
 
-export async function finishConsultantOnboarding() {
+export async function finishConsultantOnboarding(): Promise<void> {
   const session = await auth();
   const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) return { error: "Non autorizzato" };
+  if (!userId) throw new Error("Non autorizzato");
 
   await prisma.user.update({
     where: { id: userId },
