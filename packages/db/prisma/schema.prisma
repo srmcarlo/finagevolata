@@ -88,12 +88,20 @@ enum NotificationType {
   DOCUMENT_REVIEWED
 }
 
+enum PlanType {
+  FREE
+  PRO_AZIENDA
+  CONSULENTE
+  STUDIO
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String
   password      String
   role          UserRole
+  plan          PlanType  @default(FREE)
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -335,4 +343,20 @@ model PracticeActivity {
   createdAt  DateTime     @default(now())
 
   @@map("practice_activities")
+}
+
+model ContactLead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  role      String
+  message   String   @db.Text
+  plan      String?
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+  @@map("contact_leads")
 }
