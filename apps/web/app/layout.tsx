@@ -8,7 +8,11 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FinAgevolata - Piattaforma Finanza Agevolata",
+  metadataBase: new URL("https://axentraitalia.cloud"),
+  title: {
+    default: "FinAgevolata — Piattaforma Finanza Agevolata",
+    template: "%s | FinAgevolata",
+  },
   description: "Gestisci bandi e documenti per la finanza agevolata",
 };
 
