@@ -43,6 +43,26 @@ const FAQ = [
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "FinAgevolata",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            offers: [
+              { "@type": "Offer", price: "0", priceCurrency: "EUR", name: "Free" },
+              { "@type": "Offer", price: "39", priceCurrency: "EUR", name: "Pro Azienda" },
+              { "@type": "Offer", price: "149", priceCurrency: "EUR", name: "Consulente" },
+              { "@type": "Offer", price: "399", priceCurrency: "EUR", name: "Studio" },
+            ],
+            description: "Piattaforma SaaS italiana per la gestione di bandi di finanza agevolata. Ponte bidirezionale tra consulenti e aziende, con integrazione Click Day MouseX.",
+          }),
+        }}
+      />
       <HeroSection visual={<BridgeDiagram />}>
         <h1 className="text-5xl font-bold tracking-tight text-slate-900 md:text-6xl lg:text-7xl">
           La piattaforma dove consulenti e aziende lavorano <span className="text-indigo-600">insieme</span> sui bandi.
