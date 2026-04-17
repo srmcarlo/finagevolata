@@ -84,5 +84,5 @@ export function getPlan(slug: string | null | undefined): PlanDefinition | null 
 }
 
 export function planToPrismaEnum(slug: PlanSlug): "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO" {
-  return slug.toUpperCase().replace("-", "_") as "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO";
+  return slug.toUpperCase().replace(/-/g, "_") as "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO";
 }
