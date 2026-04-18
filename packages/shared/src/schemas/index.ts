@@ -3,3 +3,4 @@ export * from "./grant";
 export * from "./practice";
 export * from "./company";
 export * from "./invite";
+export * from "./document-type";
