@@ -1,131 +1,179 @@
+// apps/web/lib/actions/grants.ts
 "use server";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { grantCreateSchema, isGrantEligible } from "@finagevolata/shared";
-import { indexGrant, findSemanticMatches } from "@/lib/services/ai";
+import { revalidatePath } from "next/cache";
+import {
+  grantCreateSchema,
+  grantUpdateSchema,
+  type GrantCreateInput,
+  type GrantUpdateInput,
+} from "@finagevolata/shared";
+import {
+  sendGrantSubmittedEmail,
+  sendGrantRejectedEmail,
+} from "@/lib/email";
 
-export async function createGrant(formData: FormData) {
+type Role = "ADMIN" | "CONSULTANT" | "COMPANY";
+
+async function requireSession(allowed: Role[]) {
   const session = await auth();
-  const role = (session?.user as any)?.role;
-  if (!session?.user || (role !== "ADMIN" && role !== "CONSULTANT")) {
-    return { error: "Non autorizzato" };
-  }
-  const raw = {
-    title: formData.get("title") as string,
-    description: formData.get("description") as string,
-    issuingBody: formData.get("issuingBody") as string,
-    grantType: formData.get("grantType") as string,
-    minAmount: formData.get("minAmount") ? Number(formData.get("minAmount")) : undefined,
-    maxAmount: formData.get("maxAmount") ? Number(formData.get("maxAmount")) : undefined,
-    deadline: formData.get("deadline") ? new Date(formData.get("deadline") as string).toISOString() : undefined,
-    openDate: formData.get("openDate") ? new Date(formData.get("openDate") as string).toISOString() : undefined,
-    hasClickDay: formData.get("hasClickDay") === "true",
-    clickDayDate: formData.get("clickDayDate") ? new Date(formData.get("clickDayDate") as string).toISOString() : undefined,
-    eligibleAtecoCodes: formData.get("eligibleAtecoCodes") ? (formData.get("eligibleAtecoCodes") as string).split(",").map(s => s.trim()).filter(Boolean) : [],
-    eligibleRegions: formData.getAll("eligibleRegions") as string[],
-    eligibleCompanySizes: formData.getAll("eligibleCompanySizes") as string[],
-    sourceUrl: formData.get("sourceUrl") as string || "",
-    documentRequirements: [],
-  };
-  const parsed = grantCreateSchema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
-  
-  const isAdmin = role === "ADMIN";
-  
-  const newGrant = await prisma.grant.create({
+  const user = session?.user as { id?: string; role?: Role; name?: string } | undefined;
+  if (!user?.id) throw new Error("Non autorizzato");
+  if (!allowed.includes(user.role as Role)) throw new Error("Accesso negato");
+  return { userId: user.id, role: user.role as Role, name: user.name };
+}
+
+function normalizeGrantData(parsed: GrantCreateInput | GrantUpdateInput) {
+  const { documentRequirements, sourceUrl, deadline, openDate, clickDayDate, ...rest } =
+    parsed as GrantCreateInput;
+  return {
     data: {
-      title: parsed.data.title, 
-      description: parsed.data.description,
-      issuingBody: parsed.data.issuingBody, 
-      grantType: parsed.data.grantType,
-      minAmount: parsed.data.minAmount, 
-      maxAmount: parsed.data.maxAmount,
-      deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
-      openDate: parsed.data.openDate ? new Date(parsed.data.openDate) : null,
-      hasClickDay: parsed.data.hasClickDay,
-      clickDayDate: parsed.data.clickDayDate ? new Date(parsed.data.clickDayDate) : null,
-      eligibleAtecoCodes: parsed.data.eligibleAtecoCodes,
-      eligibleRegions: parsed.data.eligibleRegions,
-      eligibleCompanySizes: parsed.data.eligibleCompanySizes,
-      sourceUrl: parsed.data.sourceUrl || null,
-      createdById: (session.user as any).id,
-      approvedByAdmin: isAdmin, 
-      status: isAdmin ? "PUBLISHED" : "DRAFT",
+      ...rest,
+      deadline: deadline ? new Date(deadline) : null,
+      openDate: openDate ? new Date(openDate) : null,
+      clickDayDate: clickDayDate ? new Date(clickDayDate) : null,
+      sourceUrl: sourceUrl === "" ? null : sourceUrl ?? null,
+    },
+    documentRequirements,
+  };
+}
+
+export async function createGrant(input: GrantCreateInput) {
+  const { userId, role, name } = await requireSession(["ADMIN", "CONSULTANT"]);
+  const parsed = grantCreateSchema.parse(input);
+  const { data, documentRequirements } = normalizeGrantData(parsed);
+
+  const grant = await prisma.grant.create({
+    data: {
+      ...data,
+      createdById: userId,
+      status: "DRAFT",
+      approvedByAdmin: role === "ADMIN",
+      documentRequirements: {
+        create: (documentRequirements ?? []).map((d) => ({
+          documentTypeId: d.documentTypeId,
+          isRequired: d.isRequired ?? true,
+          notes: d.notes ?? null,
+          order: d.order ?? 0,
+        })),
+      },
     },
   });
 
-  // Indicizza per AI dopo la creazione
-  await indexGrant(newGrant.id, `${newGrant.title}. ${newGrant.description}`);
-
-  return { success: true };
-}
-
-export async function getGrants() {
-  const session = await auth();
-  const role = (session?.user as any)?.role;
-  if (role === "ADMIN") return prisma.grant.findMany({ orderBy: { createdAt: "desc" }, include: { createdBy: true } });
-  if (role === "CONSULTANT") return prisma.grant.findMany({ where: { OR: [{ status: "PUBLISHED", approvedByAdmin: true }, { createdById: (session?.user as any).id }] }, orderBy: { createdAt: "desc" } });
-  return prisma.grant.findMany({ where: { status: "PUBLISHED", approvedByAdmin: true }, orderBy: { createdAt: "desc" } });
-}
-
-export async function getGrantsPaginated(page = 1, pageSize = 20) {
-  const session = await auth();
-  const role = (session?.user as any)?.role;
-
-  const where =
-    role === "ADMIN"
-      ? {}
-      : role === "CONSULTANT"
-      ? { OR: [{ status: "PUBLISHED" as const, approvedByAdmin: true }, { createdById: (session?.user as any).id }] }
-      : { status: "PUBLISHED" as const, approvedByAdmin: true };
-
-  const [items, total] = await prisma.$transaction([
-    prisma.grant.findMany({
-      where,
-      include: role === "ADMIN" ? { createdBy: true } : undefined,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.grant.count({ where }),
-  ]);
-
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
-}
-
-export async function getMatchingGrants(companyId: string) {
-  const profile = await prisma.companyProfile.findUnique({ where: { userId: companyId } });
-  if (!profile) return [];
-  const grants = await prisma.grant.findMany({ where: { status: "PUBLISHED", approvedByAdmin: true } });
-  return grants.filter((grant) => isGrantEligible(
-    { 
-        eligibleAtecoCodes: grant.eligibleAtecoCodes, 
-        eligibleRegions: grant.eligibleRegions, 
-        eligibleCompanySizes: grant.eligibleCompanySizes, 
-        status: grant.status, 
-        deadline: grant.deadline?.toISOString() ?? null 
-    },
-    { atecoCode: profile.atecoCode, region: profile.region, employeeCount: profile.employeeCount }
-  ));
-}
-
-export async function getAISemanticMatches(companyId: string) {
-  const session = await auth();
-  if (!session?.user) return [];
-  return findSemanticMatches(companyId);
-}
-
-export async function approveGrant(grantId: string) {
-  const session = await auth();
-  if ((session?.user as any)?.role !== "ADMIN") return { error: "Non autorizzato" };
-  await prisma.grant.update({ where: { id: grantId }, data: { approvedByAdmin: true, status: "PUBLISHED" } });
-  
-  // Re-indicizza all'approvazione per sicurezza
-  const grant = await prisma.grant.findUnique({ where: { id: grantId } });
-  if (grant) {
-    await indexGrant(grantId, `${grant.title}. ${grant.description}`);
+  if (role === "CONSULTANT") {
+    sendGrantSubmittedEmail({
+      consultantName: name ?? "Un consulente",
+      grantTitle: parsed.title,
+    }).catch((err) => console.error("Grant submission email failed:", err));
   }
 
-  return { success: true };
+  revalidatePath("/admin/bandi");
+  revalidatePath("/admin/bandi/queue");
+  if (role === "CONSULTANT") revalidatePath("/consulente/bandi");
+  return grant;
+}
+
+export async function updateGrant(id: string, input: GrantUpdateInput) {
+  const { userId, role } = await requireSession(["ADMIN", "CONSULTANT"]);
+  const existing = await prisma.grant.findUnique({ where: { id } });
+  if (!existing) throw new Error("Bando non trovato");
+
+  if (role === "CONSULTANT") {
+    if (existing.createdById !== userId) {
+      throw new Error("Non puoi modificare un bando altrui");
+    }
+    if (existing.approvedByAdmin) {
+      throw new Error("Bando già approvato, non modificabile");
+    }
+  }
+
+  const parsed = grantUpdateSchema.parse(input);
+  const { data, documentRequirements } = normalizeGrantData(parsed);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.grant.update({ where: { id }, data });
+    if (documentRequirements !== undefined) {
+      await tx.grantDocumentRequirement.deleteMany({ where: { grantId: id } });
+      if (documentRequirements.length > 0) {
+        await tx.grantDocumentRequirement.createMany({
+          data: documentRequirements.map((d) => ({
+            grantId: id,
+            documentTypeId: d.documentTypeId,
+            isRequired: d.isRequired ?? true,
+            notes: d.notes ?? null,
+            order: d.order ?? 0,
+          })),
+        });
+      }
+    }
+  });
+
+  revalidatePath(`/admin/bandi/${id}`);
+  revalidatePath("/admin/bandi");
+  if (role === "CONSULTANT") revalidatePath(`/consulente/bandi/${id}`);
+}
+
+export async function deleteGrant(id: string) {
+  await requireSession(["ADMIN"]);
+  await prisma.grant.delete({ where: { id } });
+  revalidatePath("/admin/bandi");
+}
+
+export async function approveGrant(id: string) {
+  await requireSession(["ADMIN"]);
+  await prisma.grant.update({
+    where: { id },
+    data: { approvedByAdmin: true },
+  });
+  revalidatePath("/admin/bandi");
+  revalidatePath("/admin/bandi/queue");
+  revalidatePath(`/admin/bandi/${id}`);
+}
+
+export async function rejectGrant(id: string, reason: string) {
+  await requireSession(["ADMIN"]);
+  if (!reason || reason.trim().length < 3) {
+    throw new Error("Motivo rifiuto troppo corto");
+  }
+  const grant = await prisma.grant.findUnique({
+    where: { id },
+    include: { createdBy: { select: { email: true, name: true } } },
+  });
+  if (!grant) throw new Error("Bando non trovato");
+
+  await prisma.grant.delete({ where: { id } });
+
+  sendGrantRejectedEmail({
+    to: grant.createdBy.email,
+    consultantName: grant.createdBy.name ?? "Consulente",
+    grantTitle: grant.title,
+    reason,
+  }).catch((err) => console.error("Reject email failed:", err));
+
+  revalidatePath("/admin/bandi/queue");
+  revalidatePath("/admin/bandi");
+}
+
+export async function publishGrant(id: string) {
+  await requireSession(["ADMIN"]);
+  await prisma.grant.update({
+    where: { id },
+    data: { status: "PUBLISHED", approvedByAdmin: true },
+  });
+  revalidatePath(`/admin/bandi/${id}`);
+  revalidatePath("/admin/bandi");
+  revalidatePath("/azienda/bandi");
+  revalidatePath("/consulente/bandi");
+}
+
+export async function closeGrant(id: string) {
+  await requireSession(["ADMIN"]);
+  await prisma.grant.update({
+    where: { id },
+    data: { status: "CLOSED" },
+  });
+  revalidatePath(`/admin/bandi/${id}`);
+  revalidatePath("/admin/bandi");
 }
