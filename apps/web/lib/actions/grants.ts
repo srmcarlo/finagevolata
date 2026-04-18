@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import {
   grantCreateSchema,
   grantUpdateSchema,
+  isGrantEligible,
   type GrantCreateInput,
   type GrantUpdateInput,
 } from "@finagevolata/shared";
@@ -14,6 +15,7 @@ import {
   sendGrantSubmittedEmail,
   sendGrantRejectedEmail,
 } from "@/lib/email";
+import { findSemanticMatches } from "@/lib/services/ai";
 
 type Role = "ADMIN" | "CONSULTANT" | "COMPANY";
 
@@ -176,4 +178,96 @@ export async function closeGrant(id: string) {
   });
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
+}
+
+// --- Read helpers (kept until Tasks 10/11/12 move them to page-specific loaders) ---
+
+export async function getGrants() {
+  const session = await auth();
+  const user = session?.user as { id?: string; role?: Role } | undefined;
+  const role = user?.role;
+  if (role === "ADMIN") {
+    return prisma.grant.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { createdBy: true },
+    });
+  }
+  if (role === "CONSULTANT") {
+    return prisma.grant.findMany({
+      where: {
+        OR: [
+          { status: "PUBLISHED", approvedByAdmin: true },
+          { createdById: user!.id },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+  return prisma.grant.findMany({
+    where: { status: "PUBLISHED", approvedByAdmin: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getGrantsPaginated(page = 1, pageSize = 20) {
+  const session = await auth();
+  const user = session?.user as { id?: string; role?: Role } | undefined;
+  const role = user?.role;
+
+  const where =
+    role === "ADMIN"
+      ? {}
+      : role === "CONSULTANT"
+        ? {
+            OR: [
+              { status: "PUBLISHED" as const, approvedByAdmin: true },
+              { createdById: user!.id! },
+            ],
+          }
+        : { status: "PUBLISHED" as const, approvedByAdmin: true };
+
+  const [items, total] = await prisma.$transaction([
+    prisma.grant.findMany({
+      where,
+      include: role === "ADMIN" ? { createdBy: true } : undefined,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.grant.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+}
+
+export async function getMatchingGrants(companyUserId: string) {
+  const profile = await prisma.companyProfile.findUnique({
+    where: { userId: companyUserId },
+  });
+  if (!profile) return [];
+  const grants = await prisma.grant.findMany({
+    where: { status: "PUBLISHED", approvedByAdmin: true },
+  });
+  return grants.filter((grant) =>
+    isGrantEligible(
+      {
+        eligibleAtecoCodes: grant.eligibleAtecoCodes,
+        eligibleRegions: grant.eligibleRegions,
+        eligibleCompanySizes: grant.eligibleCompanySizes,
+        status: grant.status,
+        deadline: grant.deadline?.toISOString() ?? null,
+      },
+      {
+        atecoCode: profile.atecoCode,
+        region: profile.region,
+        employeeCount: profile.employeeCount,
+      },
+    ),
+  );
+}
+
+export async function getAISemanticMatches(companyUserId: string) {
+  const session = await auth();
+  if (!session?.user) return [];
+  return findSemanticMatches(companyUserId);
 }

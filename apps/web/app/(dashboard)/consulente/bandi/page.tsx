@@ -4,7 +4,30 @@ import { revalidatePath } from "next/cache";
 
 async function handleCreate(formData: FormData) {
   "use server";
-  await createGrant(formData);
+  const deadlineRaw = formData.get("deadline") as string | null;
+  const ateco = (formData.get("eligibleAtecoCodes") as string | null) ?? "";
+  await createGrant({
+    title: formData.get("title") as string,
+    description: formData.get("description") as string,
+    issuingBody: formData.get("issuingBody") as string,
+    grantType: formData.get("grantType") as
+      | "FONDO_PERDUTO"
+      | "FINANZIAMENTO_AGEVOLATO"
+      | "CREDITO_IMPOSTA"
+      | "GARANZIA",
+    maxAmount: formData.get("maxAmount")
+      ? Number(formData.get("maxAmount"))
+      : undefined,
+    deadline: deadlineRaw ? new Date(deadlineRaw).toISOString() : undefined,
+    hasClickDay: formData.get("hasClickDay") === "true",
+    eligibleAtecoCodes: ateco
+      ? ateco.split(",").map((s) => s.trim()).filter(Boolean)
+      : [],
+    eligibleRegions: [],
+    eligibleCompanySizes: [],
+    sourceUrl: (formData.get("sourceUrl") as string) || undefined,
+    documentRequirements: [],
+  });
   revalidatePath("/consulente/bandi");
 }
 
