@@ -23,11 +23,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const passwordMatch = await compare(parsed.data.password, user.password);
         if (!passwordMatch) return null;
 
+        // Auto-promote ADMIN_EMAILS on login (idempotent: only writes when role mismatches)
+        const { isAdminEmail } = await import("./admin-bootstrap");
+        let effectiveRole = user.role;
+        if (isAdminEmail(user.email) && user.role !== "ADMIN") {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { role: "ADMIN" },
+          });
+          effectiveRole = "ADMIN";
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: effectiveRole,
         };
       },
     }),
