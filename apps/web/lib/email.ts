@@ -128,3 +128,62 @@ Se hai domande, rispondi a questa email.
 `;
   return sendEmail({ to, subject, text });
 }
+
+/**
+ * Notifica tutti gli ADMIN_EMAILS che un consulente ha proposto un nuovo bando
+ */
+export async function sendGrantSubmittedEmail({
+  consultantName,
+  grantTitle,
+}: {
+  consultantName: string;
+  grantTitle: string;
+}) {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (adminEmails.length === 0) {
+    console.warn("sendGrantSubmittedEmail: ADMIN_EMAILS non configurato, skip.");
+    return { success: false, error: "No ADMIN_EMAILS" };
+  }
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://axentraitalia.cloud";
+  const text = `${consultantName} ha proposto un nuovo bando: "${grantTitle}".
+
+Vai alla coda approvazioni: ${baseUrl}/admin/bandi/queue
+`;
+  return sendEmail({
+    to: adminEmails.join(","),
+    subject: `[FinAgevolata] Nuovo bando da approvare: ${grantTitle}`,
+    text,
+  });
+}
+
+/**
+ * Notifica il consulente che il bando proposto è stato rifiutato
+ */
+export async function sendGrantRejectedEmail({
+  to,
+  consultantName,
+  grantTitle,
+  reason,
+}: {
+  to: string;
+  consultantName: string;
+  grantTitle: string;
+  reason: string;
+}) {
+  const text = `Ciao ${consultantName},
+
+Il bando che hai proposto — "${grantTitle}" — non è stato approvato per il seguente motivo:
+
+"${reason}"
+
+Puoi riproporlo con le modifiche necessarie.
+`;
+  return sendEmail({
+    to,
+    subject: `Bando "${grantTitle}" non approvato`,
+    text,
+  });
+}
