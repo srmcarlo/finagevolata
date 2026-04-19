@@ -1,223 +1,71 @@
-import { getGrantsPaginated, approveGrant } from "@/lib/actions/grants";
-import { createGrantWithDocuments } from "@/lib/actions/grants-admin";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
-import { GrantRagIndexer } from "@/components/grant-rag-indexer";
-import { Pagination } from "@/components/pagination";
+import type { Prisma } from "@finagevolata/db";
+import { GrantFilters } from "@/components/bandi/grant-filters";
 
-const GRANT_TYPE_LABELS: Record<string, string> = {
-  FONDO_PERDUTO: "Fondo Perduto",
-  FINANZIAMENTO_AGEVOLATO: "Finanziamento Agevolato",
-  CREDITO_IMPOSTA: "Credito d'Imposta",
-  GARANZIA: "Garanzia",
-};
-
-async function handleApprove(formData: FormData) {
-  "use server";
-  const grantId = formData.get("grantId") as string;
-  await approveGrant(grantId);
-  revalidatePath("/admin/bandi");
+interface PageProps {
+  searchParams: Promise<{ status?: string; approved?: string; type?: string; q?: string }>;
 }
 
-async function handleCreate(formData: FormData) {
-  "use server";
-  await createGrantWithDocuments(formData);
-  revalidatePath("/admin/bandi");
-}
+export default async function AdminBandiPage({ searchParams }: PageProps) {
+  const { status, approved, type, q } = await searchParams;
+  const where: Prisma.GrantWhereInput = {};
+  if (status) where.status = status as any;
+  if (approved === "pending") where.approvedByAdmin = false;
+  if (approved === "approved") where.approvedByAdmin = true;
+  if (type) where.grantType = type as any;
+  if (q) where.title = { contains: q, mode: "insensitive" };
 
-export default async function AdminGrantsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const { page: pageParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-
-  const [{ items: grants, totalPages }, documentTypes] = await Promise.all([
-    getGrantsPaginated(page, 20),
-    prisma.documentType.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  const grants = await prisma.grant.findMany({
+    where,
+    include: { createdBy: { select: { name: true, role: true } }, _count: { select: { documentRequirements: true } } },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Gestione Bandi</h1>
-
-      {/* Creation Form */}
-      <div className="rounded-lg border bg-white p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Aggiungi Bando</h2>
-        <form action={handleCreate} className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
-            <input
-              name="title"
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Titolo del bando"
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
-            <textarea
-              name="description"
-              required
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Descrizione del bando"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ente Emittente</label>
-            <input
-              name="issuingBody"
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="es. MISE, Regione Lombardia"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipologia</label>
-            <select
-              name="grantType"
-              required
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Seleziona tipo</option>
-              <option value="FONDO_PERDUTO">Fondo Perduto</option>
-              <option value="FINANZIAMENTO_AGEVOLATO">Finanziamento Agevolato</option>
-              <option value="CREDITO_IMPOSTA">Credito d&apos;Imposta</option>
-              <option value="GARANZIA">Garanzia</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Importo Massimo (&euro;)</label>
-            <input
-              name="maxAmount"
-              type="number"
-              min="0"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="es. 500000"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Scadenza</label>
-            <input
-              name="deadline"
-              type="date"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Codici ATECO (separati da virgola)</label>
-            <input
-              name="eligibleAtecoCodes"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="es. 62.01, 62.02"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL Fonte</label>
-            <input
-              name="sourceUrl"
-              type="url"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://"
-            />
-          </div>
-          <div className="col-span-2 flex items-center gap-2">
-            <input
-              name="hasClickDay"
-              type="checkbox"
-              value="true"
-              id="hasClickDay"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600"
-            />
-            <label htmlFor="hasClickDay" className="text-sm font-medium text-gray-700">Click Day</label>
-          </div>
-
-          {/* Document requirements selection */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Documenti richiesti</label>
-            <div className="grid grid-cols-2 gap-2 p-4 border rounded-md bg-gray-50 max-h-60 overflow-y-auto">
-              {documentTypes.map((dt: { id: string; name: string }) => (
-                <label key={dt.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="documentTypeIds"
-                    value={dt.id}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                  />
-                  <span className="text-gray-700">{dt.name}</span>
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Seleziona i documenti che le aziende dovranno caricare per questo bando</p>
-          </div>
-
-          <div className="col-span-2">
-            <button
-              type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Pubblica Bando
-            </button>
-          </div>
-        </form>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Bandi</h1>
+        <Link href="/admin/bandi/new" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+          Nuovo bando
+        </Link>
       </div>
-
-      {/* Grants Table */}
-      <div className="rounded-lg border bg-white overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <GrantFilters />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titolo</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ente</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipologia</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approvato</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
+              <th className="p-3">Titolo</th>
+              <th className="p-3">Ente</th>
+              <th className="p-3">Tipo</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">Approvato</th>
+              <th className="p-3">Creato da</th>
+              <th className="p-3" />
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {grants.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">Nessun bando presente</td>
-              </tr>
-            )}
-            {grants.map((grant) => (
-              <tr key={grant.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">{grant.title}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{grant.issuingBody}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{GRANT_TYPE_LABELS[grant.grantType] ?? grant.grantType}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${grant.status === "PUBLISHED" ? "bg-green-100 text-green-700" : grant.status === "DRAFT" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
-                    {grant.status === "PUBLISHED" ? "Pubblicato" : grant.status === "DRAFT" ? "Bozza" : "Chiuso"}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${grant.approvedByAdmin ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {grant.approvedByAdmin ? "Si" : "No"}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {!grant.approvedByAdmin && grant.status === "DRAFT" && (
-                    <form action={handleApprove}>
-                      <input type="hidden" name="grantId" value={grant.id} />
-                      <button
-                        type="submit"
-                        className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
-                      >
-                        Approva
-                      </button>
-                    </form>
-                  )}
-                  <GrantRagIndexer grantId={grant.id} grantTitle={grant.title} />
+          <tbody>
+            {grants.map((g) => (
+              <tr key={g.id} className="border-t border-slate-200 text-sm">
+                <td className="p-3 font-medium text-slate-900">{g.title}</td>
+                <td className="p-3">{g.issuingBody}</td>
+                <td className="p-3">{g.grantType}</td>
+                <td className="p-3">{g.status}</td>
+                <td className="p-3">{g.approvedByAdmin ? "✓" : "—"}</td>
+                <td className="p-3 text-slate-600">{g.createdBy.name} ({g.createdBy.role})</td>
+                <td className="p-3 text-right">
+                  <Link href={`/admin/bandi/${g.id}`} className="text-sm font-medium text-indigo-600 hover:underline">
+                    Apri
+                  </Link>
                 </td>
               </tr>
             ))}
+            {grants.length === 0 ? (
+              <tr><td colSpan={7} className="p-6 text-center text-sm text-slate-500">Nessun bando.</td></tr>
+            ) : null}
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} basePath="/admin/bandi" />
     </div>
   );
 }
