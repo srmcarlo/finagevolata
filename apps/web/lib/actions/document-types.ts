@@ -4,6 +4,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   documentTypeCreateSchema,
   documentTypeUpdateSchema,
@@ -45,4 +46,5 @@ export async function deleteDocumentType(id: string) {
   if (existing.isStandard) throw new Error("Impossibile eliminare un DocumentType standard");
   await prisma.documentType.delete({ where: { id } });
   revalidatePath("/admin/documenti");
+  redirect("/admin/documenti");
 }
