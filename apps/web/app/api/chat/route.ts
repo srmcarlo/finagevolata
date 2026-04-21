@@ -1,6 +1,6 @@
 // apps/web/app/api/chat/route.ts
 import { google } from "@ai-sdk/google";
-import { streamText } from "ai";
+import { streamText, convertToModelMessages } from "ai";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { searchGrantChunks } from "@/lib/services/rag";
@@ -54,7 +54,14 @@ export async function POST(req: Request) {
   }
 
   // 2. Prendi l'ultimo messaggio dell'utente per la ricerca RAG
-  const lastMessage = messages[messages.length - 1]?.content || "";
+  const lastUserMsg = messages[messages.length - 1];
+  const lastMessage =
+    typeof lastUserMsg?.content === "string"
+      ? lastUserMsg.content
+      : (lastUserMsg?.parts ?? [])
+          .filter((p: any) => p.type === "text")
+          .map((p: any) => p.text)
+          .join(" ");
 
   // 3. --- RAG: Cerca i chunk rilevanti dal vector database ---
   let ragContext = "";
@@ -110,10 +117,10 @@ ${ragContext ? `=== ESTRATTI DAL TESTO UFFICIALE DEL BANDO ===\n${ragContext}` :
 
   // 6. Genera la risposta in streaming
   const result = streamText({
-    model: google("gemini-2.0-flash"),
+    model: google("gemini-2.5-flash"),
     system: systemPrompt,
-    messages,
+    messages: convertToModelMessages(messages),
   });
 
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse();
 }

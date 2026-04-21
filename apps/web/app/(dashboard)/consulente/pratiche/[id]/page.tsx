@@ -3,7 +3,6 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getPractice, updatePracticeStatus } from "@/lib/actions/practices";
-import { reviewDocument } from "@/lib/actions/documents";
 import { getMessages } from "@/lib/actions/chat";
 import { PracticeStatusBadge } from "@/components/practice-status-badge";
 import { DocumentChecklist } from "@/components/document-checklist";
@@ -11,6 +10,7 @@ import { PracticeTimeline } from "@/components/practice-timeline";
 import { PracticeChat } from "@/components/practice-chat";
 import { AIDocumentValidator } from "@/components/ai-document-validator";
 import { ViewDocumentButton } from "@/components/view-document-button";
+import { DocumentReviewForm } from "@/components/document-review-form";
 
 const PRACTICE_STATUSES = [
   { value: "DOCUMENTS_PENDING", label: "Documenti in attesa" },
@@ -37,13 +37,6 @@ export default async function ConsultantPracticeDetailPage({ params }: { params:
     "use server";
     const status = formData.get("status") as string;
     await updatePracticeStatus(id, status);
-    revalidatePath(`/consulente/pratiche/${id}`);
-  }
-
-  async function handleReviewDocument(formData: FormData) {
-    "use server";
-    const docId = formData.get("docId") as string;
-    await reviewDocument(docId, formData);
     revalidatePath(`/consulente/pratiche/${id}`);
   }
 
@@ -104,18 +97,10 @@ export default async function ConsultantPracticeDetailPage({ params }: { params:
                     <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1 text-xs font-medium">Da revisionare</span>
                   </div>
                 </div>
-                <form action={handleReviewDocument} className="flex flex-wrap gap-2 items-end">
-                  <input type="hidden" name="docId" value={doc.id} />
-                  <div className="flex-1 min-w-[200px]">
-                    <input name="rejectionReason" type="text" placeholder="Motivo rifiuto (solo se rifiuti)"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <button type="submit" name="status" value="APPROVED"
-                    className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Approva</button>
-                  <button type="submit" name="status" value="REJECTED"
-                    className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Rifiuta</button>
+                <div className="space-y-2">
+                  <DocumentReviewForm docId={doc.id} />
                   <AIDocumentValidator docId={doc.id} />
-                </form>
+                </div>
               </div>
             ))}
           </div>

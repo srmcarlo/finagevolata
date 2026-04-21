@@ -51,7 +51,7 @@ export async function validateDocumentWithAI(
 
     // 3. Richiama Gemini utilizzando il formato corretto per lo schema
     const { object } = await generateObject({
-      model: google("gemini-1.5-pro"), 
+      model: google("gemini-2.5-flash"),
       schema: aiValidatorSchema,
       messages: [
         {

@@ -1,4 +1,6 @@
+import { auth } from "@/lib/auth";
 import { getNotifications, getUnreadCount, markAllAsRead } from "@/lib/actions/notifications";
+import { NotificationItem } from "./notification-item";
 
 async function handleMarkAllRead(): Promise<void> {
   "use server";
@@ -6,6 +8,10 @@ async function handleMarkAllRead(): Promise<void> {
 }
 
 export async function NotificationsDropdown() {
+  const session = await auth();
+  const role = (session?.user as any)?.role as string | undefined;
+  const rolePath = role === "CONSULTANT" ? "consulente" : role === "COMPANY" ? "azienda" : role === "ADMIN" ? "admin" : null;
+
   const [notifications, unreadCount] = await Promise.all([
     getNotifications(),
     getUnreadCount(),
@@ -23,13 +29,20 @@ export async function NotificationsDropdown() {
       </div>
       {notifications.length > 0 && (
         <div className="mt-2 space-y-2">
-          {notifications.slice(0, 5).map((n) => (
-            <div key={n.id} className={`rounded-lg border p-3 text-sm ${n.isRead ? "bg-white" : "bg-blue-50 border-blue-200"}`}>
-              <p className="font-medium text-gray-900">{n.title}</p>
-              <p className="text-gray-500">{n.message}</p>
-              <p className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleDateString("it-IT")}</p>
-            </div>
-          ))}
+          {notifications.slice(0, 5).map((n) => {
+            const href = n.practiceId && rolePath ? `/${rolePath}/pratiche/${n.practiceId}` : null;
+            return (
+              <NotificationItem
+                key={n.id}
+                id={n.id}
+                title={n.title}
+                message={n.message}
+                isRead={n.isRead}
+                createdAt={n.createdAt.toISOString()}
+                href={href}
+              />
+            );
+          })}
           {unreadCount > 0 && (
             <form action={handleMarkAllRead}>
               <button type="submit" className="text-xs text-blue-600 hover:underline">
