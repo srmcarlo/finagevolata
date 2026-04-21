@@ -59,9 +59,9 @@ export async function POST(req: Request) {
     typeof lastUserMsg?.content === "string"
       ? lastUserMsg.content
       : (lastUserMsg?.parts ?? [])
-          .filter((p: any) => p.type === "text")
-          .map((p: any) => p.text)
-          .join(" ");
+        .filter((p: any) => p.type === "text")
+        .map((p: any) => p.text)
+        .join(" ");
 
   // 3. --- RAG: Cerca i chunk rilevanti dal vector database ---
   let ragContext = "";
@@ -119,7 +119,7 @@ ${ragContext ? `=== ESTRATTI DAL TESTO UFFICIALE DEL BANDO ===\n${ragContext}` :
   const result = streamText({
     model: google("gemini-2.5-flash"),
     system: systemPrompt,
-    messages: convertToModelMessages(messages),
+    messages: await convertToModelMessages(messages),
   });
 
   return result.toUIMessageStreamResponse();
