@@ -14,7 +14,8 @@
     "prisma:push": "prisma db push --schema=./prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio --schema=./prisma/schema.prisma",
-    "build": "prisma generate --schema=./prisma/schema.prisma && echo \"db build ok\""
+    "build": "prisma generate --schema=./prisma/schema.prisma && echo \"db build ok\"",
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",
