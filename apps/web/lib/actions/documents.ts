@@ -119,75 +119,87 @@ export async function uploadDocument(practiceDocId: string, formData: FormData) 
 }
 
 export async function reviewDocument(practiceDocId: string, formData: FormData) {
-  const session = await auth();
-  const userId = (session?.user as any)?.id;
-  if (!userId || (session?.user as any)?.role !== "CONSULTANT") {
-    return { error: "Non autorizzato" };
-  }
+  try {
+    const session = await auth();
+    const userId = (session?.user as any)?.id;
+    const role = (session?.user as any)?.role;
+    if (!userId || role !== "CONSULTANT") {
+      console.error("[reviewDocument] unauthorized", { userId, role });
+      return { error: "Non autorizzato" };
+    }
 
-  const raw = {
-    status: formData.get("status") as string,
-    rejectionReason: formData.get("rejectionReason") as string || undefined,
-  };
+    const raw = {
+      status: formData.get("status") as string,
+      rejectionReason: (formData.get("rejectionReason") as string) || undefined,
+    };
 
-  const parsed = documentReviewSchema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+    const parsed = documentReviewSchema.safeParse(raw);
+    if (!parsed.success) return { error: parsed.error.errors[0].message };
 
-  const practiceDoc = await prisma.practiceDocument.findUnique({
-    where: { id: practiceDocId },
-    include: { practice: { include: { company: true } }, documentType: true },
-  });
-  if (!practiceDoc || practiceDoc.practice.consultantId !== userId) {
-    return { error: "Documento non trovato" };
-  }
-  if (practiceDoc.status !== "UPLOADED") {
-    return { error: "Il documento non è in stato 'Caricato'" };
-  }
-
-  const isApproved = parsed.data.status === "APPROVED";
-  const companyId = practiceDoc.practice.companyId;
-  const docName = practiceDoc.documentType.name;
-
-  await prisma.$transaction([
-    prisma.practiceDocument.update({
+    const practiceDoc = await prisma.practiceDocument.findUnique({
       where: { id: practiceDocId },
-      data: {
-        status: parsed.data.status,
-        rejectionReason: parsed.data.rejectionReason || null,
-        reviewedAt: new Date(),
-        reviewedById: userId,
-      },
-    }),
-    prisma.practiceActivity.create({
-      data: {
-        practiceId: practiceDoc.practiceId,
-        actorId: userId,
-        type: isApproved ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
-        detail: isApproved
-          ? `Ha approvato "${docName}"`
-          : `Ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}`,
-      },
-    }),
-    prisma.notification.create({
-      data: {
-        userId: companyId,
-        type: "DOCUMENT_REVIEWED",
-        title: isApproved ? `Documento approvato: ${docName}` : `Documento rifiutato: ${docName}`,
-        message: isApproved
-          ? `Il consulente ha approvato "${docName}".`
-          : `Il consulente ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}. Carica una versione corretta.`,
-        practiceId: practiceDoc.practiceId,
-      },
-    }),
-  ]);
+      include: { practice: { include: { company: true } }, documentType: true },
+    });
+    if (!practiceDoc) return { error: "Documento non trovato" };
+    if (practiceDoc.practice.consultantId !== userId) {
+      console.error("[reviewDocument] consultant mismatch", {
+        docConsultant: practiceDoc.practice.consultantId,
+        sessionUser: userId,
+      });
+      return { error: "Non autorizzato (consulente diverso)" };
+    }
+    if (practiceDoc.status !== "UPLOADED") {
+      return { error: `Documento in stato "${practiceDoc.status}", non revisionabile` };
+    }
 
-  // Email all'azienda (fuori dalla transaction — fallimento non blocca revisione)
-  const companyEmail = practiceDoc.practice.company.email;
-  sendDocumentReviewedEmail(companyEmail, docName, isApproved, parsed.data.rejectionReason).catch((e) =>
-    console.error("[Email] Review notification failed:", e)
-  );
+    const isApproved = parsed.data.status === "APPROVED";
+    const companyId = practiceDoc.practice.companyId;
+    const docName = practiceDoc.documentType.name;
 
-  return { success: true };
+    await prisma.$transaction([
+      prisma.practiceDocument.update({
+        where: { id: practiceDocId },
+        data: {
+          status: parsed.data.status,
+          rejectionReason: parsed.data.rejectionReason || null,
+          reviewedAt: new Date(),
+          reviewedById: userId,
+        },
+      }),
+      prisma.practiceActivity.create({
+        data: {
+          practiceId: practiceDoc.practiceId,
+          actorId: userId,
+          type: isApproved ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
+          detail: isApproved
+            ? `Ha approvato "${docName}"`
+            : `Ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}`,
+        },
+      }),
+      prisma.notification.create({
+        data: {
+          userId: companyId,
+          type: "DOCUMENT_REVIEWED",
+          title: isApproved ? `Documento approvato: ${docName}` : `Documento rifiutato: ${docName}`,
+          message: isApproved
+            ? `Il consulente ha approvato "${docName}".`
+            : `Il consulente ha rifiutato "${docName}"${parsed.data.rejectionReason ? `: ${parsed.data.rejectionReason}` : ""}. Carica una versione corretta.`,
+          practiceId: practiceDoc.practiceId,
+        },
+      }),
+    ]);
+
+    const companyEmail = practiceDoc.practice.company.email;
+    sendDocumentReviewedEmail(companyEmail, docName, isApproved, parsed.data.rejectionReason).catch((e) =>
+      console.error("[Email] Review notification failed:", e)
+    );
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[reviewDocument] fatal:", msg, err);
+    return { error: `Errore server: ${msg}` };
+  }
 }
 
 export async function getDocumentUrl(practiceDocId: string) {
