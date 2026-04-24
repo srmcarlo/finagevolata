@@ -113,7 +113,7 @@ export default async function ConsultantPracticeDetailPage({ params }: { params:
         {practiceData.documents.length === 0 ? (
           <p className="text-sm text-gray-500">Nessun documento richiesto per questo bando.</p>
         ) : (
-          <DocumentChecklist documents={practiceData.documents} />
+          <DocumentChecklist documents={practiceData.documents} isConsultant />
         )}
       </div>
 
