@@ -148,7 +148,8 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
       });
       return { error: "Non autorizzato (consulente diverso)" };
     }
-    if (practiceDoc.status !== "UPLOADED") {
+    const reviewable = ["UPLOADED", "APPROVED", "REJECTED", "IN_REVIEW"];
+    if (!reviewable.includes(practiceDoc.status)) {
       return { error: `Documento in stato "${practiceDoc.status}", non revisionabile` };
     }
 
