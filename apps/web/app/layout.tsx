@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { getBaseUrl } from "@/lib/base-url";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://axentraitalia.cloud"),
+  metadataBase: new URL(getBaseUrl()),
   title: {
     default: "FinAgevolata — Piattaforma Finanza Agevolata",
     template: "%s | FinAgevolata",

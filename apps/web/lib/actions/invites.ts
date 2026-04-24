@@ -5,6 +5,7 @@ import { hash } from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendClientInviteEmail } from "@/lib/email";
+import { getBaseUrl } from "@/lib/base-url";
 import { createInviteSchema, acceptInviteSchema } from "@finagevolata/shared";
 
 const INVITE_TTL_MS = 7 * 24 * 3600 * 1000;
@@ -41,7 +42,7 @@ export async function createClientInvite(input: unknown): Promise<{ ok: true }> 
     },
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://axentraitalia.cloud";
+  const baseUrl = getBaseUrl();
   await sendClientInviteEmail({
     to: parsed.email,
     consultantName: user.name ?? "Un consulente",

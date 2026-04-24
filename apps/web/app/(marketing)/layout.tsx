@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { MarketingHeader } from "@/components/marketing/marketing-header";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import { getBaseUrl } from "@/lib/base-url";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://axentraitalia.cloud"),
+  metadataBase: new URL(getBaseUrl()),
 };
 
 export default function MarketingLayout({

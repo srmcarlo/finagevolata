@@ -1,5 +1,6 @@
 // apps/web/lib/email.ts
 import { Resend } from "resend";
+import { getBaseUrl } from "@/lib/base-url";
 
 export async function sendEmail({
   to,
@@ -110,7 +111,7 @@ export async function sendWelcomeEmail({
   name: string;
   role: "COMPANY" | "CONSULTANT";
 }) {
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://axentraitalia.cloud";
+  const baseUrl = getBaseUrl();
   const subject =
     role === "CONSULTANT"
       ? "Benvenuto su FinAgevolata, consulente"
@@ -147,7 +148,7 @@ export async function sendGrantSubmittedEmail({
     console.warn("sendGrantSubmittedEmail: ADMIN_EMAILS non configurato, skip.");
     return { success: false, error: "No ADMIN_EMAILS" };
   }
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://axentraitalia.cloud";
+  const baseUrl = getBaseUrl();
   const text = `${consultantName} ha proposto un nuovo bando: "${grantTitle}".
 
 Vai alla coda approvazioni: ${baseUrl}/admin/bandi/queue
