@@ -8,5 +8,5 @@ export interface CciaaData {
 }
 
 export interface CciaaProvider {
-  lookup(vatNumber: string): Promise<CciaaData | null>;
+  lookup(vatNumber: string, hint?: Partial<CciaaData>): Promise<CciaaData | null>;
 }
