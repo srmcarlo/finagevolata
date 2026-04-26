@@ -22,7 +22,13 @@
         "RESEND_API_KEY",
         "EMAIL_FROM",
         "GOOGLE_GENERATIVE_AI_API_KEY",
-        "CONTACT_EMAIL_TO"
+        "CONTACT_EMAIL_TO",
+        "CCIAA_PROVIDER",
+        "OPENAI_API_KEY",
+        "OPENAI_ATECO_MODEL",
+        "OPENAPI_IT_TOKEN",
+        "OPENAPI_IT_TIER",
+        "OPENAPI_IT_SANDBOX"
       ]
     },
     "dev": {
