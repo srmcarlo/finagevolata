@@ -283,6 +283,33 @@ describe("getMatchExplanation", () => {
   });
 
   it("invalidates a row older than 30 days and recomputes", async () => {
+    // covered below
+  });
+});
+
+import { invalidateMatchExplanations } from "./matching";
+
+describe("invalidateMatchExplanations", () => {
+  it("deletes by companyId", async () => {
+    mockExplDeleteMany.mockResolvedValue({ count: 3 });
+    await invalidateMatchExplanations({ companyId: "u1" });
+    expect(mockExplDeleteMany).toHaveBeenCalledWith({ where: { companyId: "u1" } });
+  });
+
+  it("deletes by grantId", async () => {
+    mockExplDeleteMany.mockResolvedValue({ count: 5 });
+    await invalidateMatchExplanations({ grantId: "g1" });
+    expect(mockExplDeleteMany).toHaveBeenCalledWith({ where: { grantId: "g1" } });
+  });
+
+  it("no-ops with no filters", async () => {
+    await invalidateMatchExplanations({});
+    expect(mockExplDeleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("getMatchExplanation TTL re-test", () => {
+  it("invalidates a row older than 30 days and recomputes", async () => {
     mockAuth.mockResolvedValue({ user: { id: "u1", role: "COMPANY" } });
     mockProfileFindUnique.mockResolvedValue(explProfile);
     mockGrantsRaw.mockResolvedValue([explGrant]);

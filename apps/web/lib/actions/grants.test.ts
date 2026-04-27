@@ -24,6 +24,9 @@ vi.mock("@/lib/prisma", () => ({
       deleteMany: (...a: any[]) => mockDocReqDeleteMany(...a),
       createMany: (...a: any[]) => mockDocReqCreateMany(...a),
     },
+    grantMatchExplanation: {
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
     $transaction: (fn: any) => mockTransaction(fn),
   },
 }));

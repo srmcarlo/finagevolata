@@ -244,3 +244,17 @@ export async function getMatchExplanation(
 
   return { paragraph, chips: score.chips, score, fromCache: false };
 }
+
+export async function invalidateMatchExplanations(opts: {
+  companyId?: string;
+  grantId?: string;
+}): Promise<void> {
+  if (opts.companyId) {
+    await prisma.grantMatchExplanation.deleteMany({ where: { companyId: opts.companyId } });
+    return;
+  }
+  if (opts.grantId) {
+    await prisma.grantMatchExplanation.deleteMany({ where: { grantId: opts.grantId } });
+    return;
+  }
+}

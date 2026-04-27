@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateMatchExplanations } from "@/lib/actions/matching";
 
 const CompanyProfileSchema = z.object({
   vatNumber: z.string().regex(/^\d{11}$/, "P.IVA deve essere 11 cifre"),
@@ -30,6 +31,8 @@ export async function saveCompanyProfile(formData: FormData) {
     create: { userId, ...parsed.data },
     update: parsed.data,
   });
+
+  await invalidateMatchExplanations({ companyId: userId });
 
   return { success: true };
 }
