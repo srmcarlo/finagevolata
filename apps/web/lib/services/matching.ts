@@ -8,6 +8,12 @@ function division(code: string): string {
   return normalize(code).split(".")[0] ?? "";
 }
 
+// ATECO precision levels: exact = identical code; sub = profile is a descendant of eligible;
+// parent = profile is an ancestor of eligible; prefix = same 2-digit division; none = no match.
+// The OR-branch in sub/parent handles group-level codes (e.g. "62.0") where the decimal suffix
+// is a single digit — "62.01".startsWith("62.0.") is false, so length-and-prefix catches it.
+// Callers MUST pass real ATECO codes (normalized via validated dropdowns); malformed strings
+// (e.g. "62.1" vs "62.10") can produce false positives in sub/parent detection.
 export function atecoMatches(
   profileAteco: string,
   eligibleAtecoCodes: string[]

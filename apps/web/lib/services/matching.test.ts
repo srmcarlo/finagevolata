@@ -29,4 +29,16 @@ describe("atecoMatches", () => {
   it("trims whitespace and is case-insensitive on letters (rare edge)", () => {
     expect(atecoMatches(" 62.01 ", [" 62.01 "])).toEqual({ matches: true, precision: "exact" });
   });
+
+  it("returns sub when profile is a class and eligible is a bare division code", () => {
+    expect(atecoMatches("62.01", ["62"])).toEqual({ matches: true, precision: "sub" });
+  });
+
+  it("returns sub when profile is a class and eligible is a group code", () => {
+    expect(atecoMatches("62.01", ["62.0"])).toEqual({ matches: true, precision: "sub" });
+  });
+
+  it("returns parent when profile is a bare division and eligible is a subclass", () => {
+    expect(atecoMatches("62", ["62.01.01"])).toEqual({ matches: true, precision: "parent" });
+  });
 });
