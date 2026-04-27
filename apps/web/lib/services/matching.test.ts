@@ -135,4 +135,17 @@ describe("computeRulesScore", () => {
     const r = computeRulesScore(baseProfile, { ...baseGrant, approvedByAdmin: false });
     expect(r.breakdown.approval).toBe(0);
   });
+
+  it("amount earns 5/20 (out of range) when annualRevenue is 0", () => {
+    const r = computeRulesScore(
+      { ...baseProfile, annualRevenue: 0 },
+      baseGrant
+    );
+    expect(r.breakdown.amount).toBe(5);
+  });
+
+  it("ateco parent earns 20/30", () => {
+    const r = computeRulesScore({ ...baseProfile, atecoCode: "62" }, baseGrant);
+    expect(r.breakdown.ateco).toBe(20);
+  });
 });

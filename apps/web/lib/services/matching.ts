@@ -1,3 +1,11 @@
+import type { CompanySize } from "@prisma/client";
+
+// ATECO precision levels: exact = identical code; sub = profile is a descendant of eligible;
+// parent = profile is an ancestor of eligible; prefix = same 2-digit division; none = no match.
+// The OR-branch in sub/parent handles group-level codes (e.g. "62.0") where the decimal suffix
+// is a single digit — "62.01".startsWith("62.0.") is false, so length-and-prefix catches it.
+// Callers MUST pass real ATECO codes (normalized via validated dropdowns); malformed strings
+// (e.g. "62.1" vs "62.10") can produce false positives in sub/parent detection.
 export type AtecoPrecision = "exact" | "sub" | "parent" | "prefix" | "none";
 
 function normalize(code: string): string {
@@ -8,12 +16,6 @@ function division(code: string): string {
   return normalize(code).split(".")[0] ?? "";
 }
 
-// ATECO precision levels: exact = identical code; sub = profile is a descendant of eligible;
-// parent = profile is an ancestor of eligible; prefix = same 2-digit division; none = no match.
-// The OR-branch in sub/parent handles group-level codes (e.g. "62.0") where the decimal suffix
-// is a single digit — "62.01".startsWith("62.0.") is false, so length-and-prefix catches it.
-// Callers MUST pass real ATECO codes (normalized via validated dropdowns); malformed strings
-// (e.g. "62.1" vs "62.10") can produce false positives in sub/parent detection.
 export function atecoMatches(
   profileAteco: string,
   eligibleAtecoCodes: string[]
@@ -44,8 +46,6 @@ export function atecoMatches(
   }
   return { matches: false, precision: "none" };
 }
-
-import type { CompanySize } from "@prisma/client";
 
 export interface MatchScoreBreakdown {
   ateco: number;
@@ -80,15 +80,16 @@ function atecoPoints(precision: AtecoPrecision): number {
 }
 
 function amountPoints(maxAmount: number | null, annualRevenue: number | null): number {
-  if (maxAmount == null || annualRevenue == null || annualRevenue <= 0) return 10;
+  if (maxAmount == null || annualRevenue == null) return 10; // neutral per spec
+  if (annualRevenue <= 0) return 5; // out of range — protects against div-by-zero
   const ratio = maxAmount / annualRevenue;
   if (ratio >= 0.1 && ratio <= 1.0) return 20;
   return 5;
 }
 
-function deadlinePoints(deadline: Date | null): number {
+function deadlinePoints(deadline: Date | null, now: number = Date.now()): number {
   if (!deadline) return 0;
-  const days = Math.floor((deadline.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  const days = Math.floor((deadline.getTime() - now) / (24 * 60 * 60 * 1000));
   if (days >= 60) return 15;
   if (days >= 30) return 10;
   if (days >= 15) return 5;
@@ -100,18 +101,19 @@ export function computeRulesScore(
   grant: {
     eligibleAtecoCodes: string[];
     eligibleCompanySizes: CompanySize[];
-    minAmount: number | null;
+    minAmount: number | null; // reserved for future lower-bound check
     maxAmount: number | null;
     deadline: Date | null;
     approvedByAdmin: boolean;
   }
 ): { score: number; breakdown: MatchScoreBreakdown } {
+  const now = Date.now();
   const { precision } = atecoMatches(profile.atecoCode, grant.eligibleAtecoCodes);
   const breakdown: MatchScoreBreakdown = {
     ateco: atecoPoints(precision),
     size: sizeAdjacency(profile.employeeCount, grant.eligibleCompanySizes),
     amount: amountPoints(grant.maxAmount, profile.annualRevenue),
-    deadline: deadlinePoints(grant.deadline),
+    deadline: deadlinePoints(grant.deadline, now),
     approval: grant.approvedByAdmin ? 10 : 0,
   };
   const score = breakdown.ateco + breakdown.size + breakdown.amount + breakdown.deadline + breakdown.approval;
