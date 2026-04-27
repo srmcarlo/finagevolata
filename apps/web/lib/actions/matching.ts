@@ -140,3 +140,32 @@ export async function matchGrantsForCompany(
   const limit = opts?.limit ?? scored.length;
   return scored.slice(offset, offset + limit);
 }
+
+export async function getMatchScoresForGrants(
+  companyId: string,
+  grantIds: string[]
+): Promise<Map<string, MatchScore>> {
+  if (grantIds.length === 0) return new Map();
+  const all = await matchGrantsForCompany(companyId);
+  const wanted = new Set(grantIds);
+  const map = new Map<string, MatchScore>();
+  for (const r of all) {
+    if (wanted.has(r.grant.id)) map.set(r.grant.id, r.score);
+  }
+  return map;
+}
+
+export async function getMatchScoreForGrant(
+  companyId: string,
+  grantId: string
+): Promise<MatchScore | null> {
+  const m = await getMatchScoresForGrants(companyId, [grantId]);
+  return m.get(grantId) ?? null;
+}
+
+export async function getTopMatchesForDashboard(
+  companyId: string,
+  limit = 5
+): Promise<Array<{ grant: Grant; score: MatchScore }>> {
+  return matchGrantsForCompany(companyId, { limit });
+}
