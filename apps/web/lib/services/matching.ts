@@ -55,6 +55,14 @@ export interface MatchScoreBreakdown {
   approval: number;
 }
 
+export type ChipLabel =
+  | "ATECO compatibile"
+  | "Dimensione adatta"
+  | "Importo nel range"
+  | "Tempistica OK"
+  | "Settore affine"
+  | "Approvato";
+
 const SIZE_ORDER: CompanySize[] = ["MICRO", "SMALL", "MEDIUM", "LARGE"];
 
 function sizeAdjacency(profile: CompanySize, eligibles: CompanySize[]): number {
@@ -125,17 +133,20 @@ export function combineScores(
   semanticScore: number,
   weightRules = 0.6
 ): number {
-  return Math.round(weightRules * rulesScore + (1 - weightRules) * semanticScore);
+  if (!Number.isFinite(semanticScore)) return Math.round(rulesScore);
+  const w = Math.max(0, Math.min(1, weightRules));
+  return Math.round(w * rulesScore + (1 - w) * semanticScore);
 }
 
 export function deriveChips(
   breakdown: MatchScoreBreakdown,
   semanticScore: number,
   approvedByAdmin: boolean
-): string[] {
-  const chips: string[] = [];
+): ChipLabel[] {
+  const chips: ChipLabel[] = [];
   if (breakdown.ateco >= 20) chips.push("ATECO compatibile");
   if (breakdown.size === 25) chips.push("Dimensione adatta");
+  // amount chip shows only for the "in-range" outcome (20); threshold excludes neutral (10) and out-of-range (5)
   if (breakdown.amount >= 15) chips.push("Importo nel range");
   if (breakdown.deadline >= 10) chips.push("Tempistica OK");
   if (semanticScore >= 70) chips.push("Settore affine");
@@ -148,5 +159,5 @@ export interface MatchScore {
   rulesScore: number;
   semanticScore: number;
   breakdown: MatchScoreBreakdown;
-  chips: string[];
+  chips: ChipLabel[];
 }

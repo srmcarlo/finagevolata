@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { atecoMatches, computeRulesScore } from "./matching";
+import {
+  atecoMatches,
+  computeRulesScore,
+  combineScores,
+  deriveChips,
+} from "./matching";
 import type { CompanySize } from "@prisma/client";
 
 describe("atecoMatches", () => {
@@ -150,8 +155,6 @@ describe("computeRulesScore", () => {
   });
 });
 
-import { combineScores, deriveChips } from "./matching";
-
 describe("combineScores", () => {
   it("uses default weight 0.6 rules + 0.4 semantic", () => {
     expect(combineScores(100, 50)).toBe(80); // 0.6*100 + 0.4*50 = 80
@@ -161,6 +164,13 @@ describe("combineScores", () => {
   });
   it("accepts a custom weight override", () => {
     expect(combineScores(100, 0, 0.7)).toBe(70);
+  });
+  it("falls back to rulesScore when semanticScore is NaN", () => {
+    expect(combineScores(80, NaN)).toBe(80);
+  });
+  it("clamps weight outside [0,1]", () => {
+    expect(combineScores(100, 0, 1.5)).toBe(100);
+    expect(combineScores(100, 0, -0.5)).toBe(0);
   });
 });
 
