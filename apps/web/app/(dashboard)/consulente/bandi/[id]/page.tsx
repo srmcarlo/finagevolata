@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GrantForm } from "@/components/bandi/grant-form";
 import { updateGrant } from "@/lib/actions/grants";
+import { matchClientsForGrant } from "@/lib/actions/matching";
+import { MatchScoreBadge } from "@/components/matching/match-score-badge";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -62,6 +65,10 @@ export default async function ConsulenteBandoDetailPage({ params }: PageProps) {
     );
   }
 
+  const compatibleClients = userId
+    ? await matchClientsForGrant(userId, id).catch(() => [])
+    : [];
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <div>
@@ -85,6 +92,39 @@ export default async function ConsulenteBandoDetailPage({ params }: PageProps) {
           {grant.documentRequirements.length === 0 ? <li className="text-slate-500">Nessun documento specificato.</li> : null}
         </ul>
       </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="mb-3 text-lg font-semibold">Tuoi clienti compatibili</h2>
+        {compatibleClients.length === 0 ? (
+          <p className="text-sm text-slate-500">Nessun cliente compatibile con questo bando.</p>
+        ) : (
+          <ul className="divide-y rounded-lg border bg-white">
+            {compatibleClients.map((c) => (
+              <li key={c.companyId} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="font-medium">{c.companyName}</p>
+                  <div className="mt-1">
+                    <MatchScoreBadge score={c.score.total} />
+                  </div>
+                </div>
+                {c.hasPractice ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    Pratica in corso
+                  </span>
+                ) : (
+                  <Link
+                    href={`/consulente/pratiche/new?grantId=${id}&clientId=${c.companyId}`}
+                    className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Avvia
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {grant.sourceUrl ? (
         <a href={grant.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-indigo-600 hover:underline">
           Sito ufficiale →
