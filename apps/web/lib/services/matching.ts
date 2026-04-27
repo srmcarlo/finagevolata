@@ -44,3 +44,76 @@ export function atecoMatches(
   }
   return { matches: false, precision: "none" };
 }
+
+import type { CompanySize } from "@prisma/client";
+
+export interface MatchScoreBreakdown {
+  ateco: number;
+  size: number;
+  amount: number;
+  deadline: number;
+  approval: number;
+}
+
+const SIZE_ORDER: CompanySize[] = ["MICRO", "SMALL", "MEDIUM", "LARGE"];
+
+function sizeAdjacency(profile: CompanySize, eligibles: CompanySize[]): number {
+  if (eligibles.length === 0) return 0;
+  if (eligibles.includes(profile)) return 25;
+  const profileIdx = SIZE_ORDER.indexOf(profile);
+  const adjacent = eligibles.some((e) => Math.abs(SIZE_ORDER.indexOf(e) - profileIdx) === 1);
+  return adjacent ? 15 : 0;
+}
+
+function atecoPoints(precision: AtecoPrecision): number {
+  switch (precision) {
+    case "exact":
+    case "sub":
+      return 30;
+    case "parent":
+      return 20;
+    case "prefix":
+      return 10;
+    case "none":
+      return 0;
+  }
+}
+
+function amountPoints(maxAmount: number | null, annualRevenue: number | null): number {
+  if (maxAmount == null || annualRevenue == null || annualRevenue <= 0) return 10;
+  const ratio = maxAmount / annualRevenue;
+  if (ratio >= 0.1 && ratio <= 1.0) return 20;
+  return 5;
+}
+
+function deadlinePoints(deadline: Date | null): number {
+  if (!deadline) return 0;
+  const days = Math.floor((deadline.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days >= 60) return 15;
+  if (days >= 30) return 10;
+  if (days >= 15) return 5;
+  return 0;
+}
+
+export function computeRulesScore(
+  profile: { atecoCode: string; employeeCount: CompanySize; annualRevenue: number | null },
+  grant: {
+    eligibleAtecoCodes: string[];
+    eligibleCompanySizes: CompanySize[];
+    minAmount: number | null;
+    maxAmount: number | null;
+    deadline: Date | null;
+    approvedByAdmin: boolean;
+  }
+): { score: number; breakdown: MatchScoreBreakdown } {
+  const { precision } = atecoMatches(profile.atecoCode, grant.eligibleAtecoCodes);
+  const breakdown: MatchScoreBreakdown = {
+    ateco: atecoPoints(precision),
+    size: sizeAdjacency(profile.employeeCount, grant.eligibleCompanySizes),
+    amount: amountPoints(grant.maxAmount, profile.annualRevenue),
+    deadline: deadlinePoints(grant.deadline),
+    approval: grant.approvedByAdmin ? 10 : 0,
+  };
+  const score = breakdown.ateco + breakdown.size + breakdown.amount + breakdown.deadline + breakdown.approval;
+  return { score, breakdown };
+}
