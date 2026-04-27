@@ -5,7 +5,7 @@ import {
   combineScores,
   deriveChips,
 } from "./matching";
-import type { CompanySize } from "@prisma/client";
+import type { CompanySize } from "@finagevolata/db";
 
 describe("atecoMatches", () => {
   it("returns exact when ateco is identical", () => {

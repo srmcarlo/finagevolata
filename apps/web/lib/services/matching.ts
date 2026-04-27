@@ -1,4 +1,4 @@
-import type { CompanySize } from "@prisma/client";
+import type { CompanySize } from "@finagevolata/db";
 
 // ATECO precision levels: exact = identical code; sub = profile is a descendant of eligible;
 // parent = profile is an ancestor of eligible; prefix = same 2-digit division; none = no match.
