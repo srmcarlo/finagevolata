@@ -258,3 +258,108 @@ export async function invalidateMatchExplanations(opts: {
     return;
   }
 }
+
+async function loadConsultantClients(consultantId: string) {
+  return prisma.consultantCompany.findMany({
+    where: { consultantId, status: "ACTIVE" },
+    include: { company: true },
+  });
+}
+
+export async function matchClientsForGrant(
+  consultantId: string,
+  grantId: string
+): Promise<
+  Array<{ companyId: string; companyName: string; score: MatchScore; hasPractice: boolean }>
+> {
+  const { userId } = await requireSession(["CONSULTANT", "ADMIN"]);
+  if (userId !== consultantId) throw new Error("Non autorizzato");
+
+  const links = await loadConsultantClients(consultantId);
+  if (links.length === 0) return [];
+
+  const practices = await prisma.practice.findMany({
+    where: { consultantId, grantId, companyId: { in: links.map((l) => l.companyId) } },
+    select: { companyId: true },
+  });
+  const practiceSet = new Set(practices.map((p) => p.companyId));
+
+  const results: Array<{
+    companyId: string;
+    companyName: string;
+    score: MatchScore;
+    hasPractice: boolean;
+  }> = [];
+  for (const link of links) {
+    const score = await getMatchScoreForGrant(link.companyId, grantId);
+    if (!score) continue;
+    results.push({
+      companyId: link.companyId,
+      companyName: (link.company as { name: string }).name,
+      score,
+      hasPractice: practiceSet.has(link.companyId),
+    });
+  }
+  return results.sort((a, b) => b.score.total - a.score.total);
+}
+
+export async function matchGrantsForConsultantClients(
+  consultantId: string,
+  opts?: { clientId?: string; topNPerClient?: number }
+): Promise<Map<string, Array<{ grant: Grant; score: MatchScore }>>> {
+  const { userId } = await requireSession(["CONSULTANT", "ADMIN"]);
+  if (userId !== consultantId) throw new Error("Non autorizzato");
+
+  const links = await loadConsultantClients(consultantId);
+  const targetIds = opts?.clientId ? [opts.clientId] : links.map((l) => l.companyId);
+  const top = opts?.topNPerClient ?? 5;
+
+  const out = new Map<string, Array<{ grant: Grant; score: MatchScore }>>();
+  for (const id of targetIds) {
+    out.set(id, await matchGrantsForCompany(id, { limit: top }));
+  }
+  return out;
+}
+
+export async function getTopOpportunitiesForConsultant(
+  consultantId: string,
+  limit = 10
+): Promise<
+  Array<{
+    companyId: string;
+    companyName: string;
+    grant: Grant;
+    score: MatchScore;
+    priority: number;
+  }>
+> {
+  const all = await matchGrantsForConsultantClients(consultantId);
+  const links = await loadConsultantClients(consultantId);
+  const nameById = new Map(links.map((l) => [l.companyId, (l.company as { name: string }).name]));
+
+  const flat: Array<{
+    companyId: string;
+    companyName: string;
+    grant: Grant;
+    score: MatchScore;
+    priority: number;
+  }> = [];
+  for (const [companyId, rows] of all) {
+    for (const r of rows) {
+      const days =
+        r.grant.deadline == null
+          ? null
+          : Math.floor((r.grant.deadline.getTime() - Date.now()) / 86400000);
+      const urgency = days == null ? 0 : Math.max(0, Math.min(1, 1 - days / 90));
+      const priority = r.score.total + 20 * urgency;
+      flat.push({
+        companyId,
+        companyName: nameById.get(companyId) ?? "",
+        grant: r.grant,
+        score: r.score,
+        priority,
+      });
+    }
+  }
+  return flat.sort((a, b) => b.priority - a.priority).slice(0, limit);
+}

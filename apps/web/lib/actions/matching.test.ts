@@ -332,3 +332,104 @@ describe("getMatchExplanation TTL re-test", () => {
     expect(result.paragraph).toBe("fresh paragraph");
   });
 });
+
+import {
+  matchClientsForGrant,
+  matchGrantsForConsultantClients,
+  getTopOpportunitiesForConsultant,
+} from "./matching";
+
+describe("matchClientsForGrant", () => {
+  it("returns clients with score and a hasPractice flag", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "c1", role: "CONSULTANT" } });
+    mockConsultantCompanyFindMany.mockResolvedValue([
+      { companyId: "u1", company: { name: "Acme" } },
+      { companyId: "u2", company: { name: "Beta" } },
+    ]);
+    mockConsultantCompanyFindFirst.mockResolvedValue({ id: "link", status: "ACTIVE" });
+    mockProfileFindUnique
+      .mockResolvedValueOnce({
+        userId: "u1", atecoCode: "62.01", employeeCount: "SMALL",
+        annualRevenue: 500_000, region: "Lazio", embedding: [0.1],
+      })
+      .mockResolvedValueOnce({
+        userId: "u2", atecoCode: "62.01", employeeCount: "MEDIUM",
+        annualRevenue: 1_000_000, region: "Lazio", embedding: [0.2],
+      });
+    mockGrantsRaw.mockResolvedValue([
+      {
+        id: "g1", title: "A", description: "", issuingBody: "MISE", grantType: "FONDO_PERDUTO",
+        eligibleAtecoCodes: ["62.01"], eligibleCompanySizes: ["SMALL"],
+        eligibleRegions: ["Lazio"], minAmount: 50_000, maxAmount: 200_000,
+        deadline: new Date(Date.now() + 90 * 86400000), approvedByAdmin: true,
+      },
+    ]);
+    mockSimilarityRaw.mockResolvedValue([]);
+    mockPracticeFindMany.mockResolvedValue([{ companyId: "u1" }]);
+
+    const out = await matchClientsForGrant("c1", "g1");
+    expect(out).toHaveLength(2);
+    const u1 = out.find((r) => r.companyId === "u1")!;
+    expect(u1.hasPractice).toBe(true);
+    expect(u1.score.total).toBeGreaterThan(50);
+    const u2 = out.find((r) => r.companyId === "u2")!;
+    expect(u2.hasPractice).toBe(false);
+  });
+
+  it("rejects when consultantId is not the session user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "c-other", role: "CONSULTANT" } });
+    await expect(matchClientsForGrant("c1", "g1")).rejects.toThrow("Non autorizzato");
+  });
+});
+
+describe("getTopOpportunitiesForConsultant", () => {
+  it("ranks opportunities by priority (match + urgency boost)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "c1", role: "CONSULTANT" } });
+    mockConsultantCompanyFindMany.mockResolvedValue([
+      { companyId: "u1", company: { name: "Acme" } },
+    ]);
+    mockConsultantCompanyFindFirst.mockResolvedValue({ id: "link", status: "ACTIVE" });
+    mockProfileFindUnique.mockResolvedValue({
+      userId: "u1", atecoCode: "62.01", employeeCount: "SMALL",
+      annualRevenue: 500_000, region: "Lazio", embedding: [0.1],
+    });
+    mockGrantsRaw.mockResolvedValue([
+      {
+        id: "g-soon", title: "Soon", description: "", issuingBody: "MISE", grantType: "FONDO_PERDUTO",
+        eligibleAtecoCodes: ["62.01"], eligibleCompanySizes: ["SMALL"],
+        eligibleRegions: ["Lazio"], minAmount: 50_000, maxAmount: 200_000,
+        deadline: new Date(Date.now() + 5 * 86400000), approvedByAdmin: true,
+      },
+      {
+        id: "g-late", title: "Late", description: "", issuingBody: "MISE", grantType: "FONDO_PERDUTO",
+        eligibleAtecoCodes: ["62.01"], eligibleCompanySizes: ["SMALL"],
+        eligibleRegions: ["Lazio"], minAmount: 50_000, maxAmount: 200_000,
+        deadline: new Date(Date.now() + 120 * 86400000), approvedByAdmin: true,
+      },
+    ]);
+    mockSimilarityRaw.mockResolvedValue([]);
+
+    const top = await getTopOpportunitiesForConsultant("c1", 5);
+    expect(top[0].grant.id).toBe("g-soon");
+  });
+});
+
+describe("matchGrantsForConsultantClients", () => {
+  it("returns a Map per client", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "c1", role: "CONSULTANT" } });
+    mockConsultantCompanyFindMany.mockResolvedValue([
+      { companyId: "u1", company: { name: "Acme" } },
+    ]);
+    mockConsultantCompanyFindFirst.mockResolvedValue({ id: "link", status: "ACTIVE" });
+    mockProfileFindUnique.mockResolvedValue({
+      userId: "u1", atecoCode: "62.01", employeeCount: "SMALL",
+      annualRevenue: 500_000, region: "Lazio", embedding: [0.1],
+    });
+    mockGrantsRaw.mockResolvedValue([]);
+    mockSimilarityRaw.mockResolvedValue([]);
+
+    const m = await matchGrantsForConsultantClients("c1");
+    expect(m.size).toBe(1);
+    expect(m.get("u1")).toEqual([]);
+  });
+});
