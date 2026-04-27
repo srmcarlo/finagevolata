@@ -5,12 +5,32 @@ const mockProfileFindUnique = vi.fn();
 const mockGrantsRaw = vi.fn();
 const mockSimilarityRaw = vi.fn();
 const mockConsultantCompanyFindFirst = vi.fn();
+const mockConsultantCompanyFindMany = vi.fn();
+const mockGrantFindUnique = vi.fn();
+const mockExplFindUnique = vi.fn();
+const mockExplUpsert = vi.fn();
+const mockExplDeleteMany = vi.fn();
+const mockPracticeFindMany = vi.fn();
+const mockGenerateExplanation = vi.fn();
 
 vi.mock("@/lib/auth", () => ({ auth: () => mockAuth() }));
+vi.mock("@/lib/services/match-explanation", () => ({
+  generateExplanation: (...a: any[]) => mockGenerateExplanation(...a),
+}));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     companyProfile: { findUnique: (...a: any[]) => mockProfileFindUnique(...a) },
-    consultantCompany: { findFirst: (...a: any[]) => mockConsultantCompanyFindFirst(...a) },
+    consultantCompany: {
+      findFirst: (...a: any[]) => mockConsultantCompanyFindFirst(...a),
+      findMany: (...a: any[]) => mockConsultantCompanyFindMany(...a),
+    },
+    grant: { findUnique: (...a: any[]) => mockGrantFindUnique(...a) },
+    grantMatchExplanation: {
+      findUnique: (...a: any[]) => mockExplFindUnique(...a),
+      upsert: (...a: any[]) => mockExplUpsert(...a),
+      deleteMany: (...a: any[]) => mockExplDeleteMany(...a),
+    },
+    practice: { findMany: (...a: any[]) => mockPracticeFindMany(...a) },
     $queryRaw: (...a: any[]) => {
       const [query] = a;
       const text = Array.isArray(query) ? query.join("?") : String(query);
@@ -28,6 +48,13 @@ beforeEach(() => {
   mockGrantsRaw.mockReset();
   mockSimilarityRaw.mockReset();
   mockConsultantCompanyFindFirst.mockReset();
+  mockConsultantCompanyFindMany.mockReset();
+  mockGrantFindUnique.mockReset();
+  mockExplFindUnique.mockReset();
+  mockExplUpsert.mockReset();
+  mockExplDeleteMany.mockReset();
+  mockPracticeFindMany.mockReset();
+  mockGenerateExplanation.mockReset();
 });
 
 describe("matchGrantsForCompany", () => {
@@ -191,5 +218,90 @@ describe("getMatchScoreForGrant", () => {
 
     const score = await getMatchScoreForGrant("u1", "g-missing");
     expect(score).toBeNull();
+  });
+});
+
+import { getMatchExplanation } from "./matching";
+
+const explProfile = {
+  ...baseProfileMock,
+  companyName: "Acme",
+  atecoDescription: "Software",
+};
+
+const explGrant = {
+  id: "g1",
+  title: "Bando A",
+  description: "...",
+  issuingBody: "MISE",
+  grantType: "FONDO_PERDUTO",
+  minAmount: 50_000,
+  maxAmount: 200_000,
+  deadline: new Date(Date.now() + 90 * 86400000),
+  eligibleAtecoCodes: ["62.01"],
+  eligibleRegions: ["Lazio"],
+  eligibleCompanySizes: ["SMALL"],
+  approvedByAdmin: true,
+};
+
+describe("getMatchExplanation", () => {
+  it("returns cached row without calling OpenAI when fresh", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "u1", role: "COMPANY" } });
+    mockProfileFindUnique.mockResolvedValue(explProfile);
+    mockGrantsRaw.mockResolvedValue([explGrant]);
+    mockSimilarityRaw.mockResolvedValue([{ id: "g1", similarity: 0.8 }]);
+    mockExplFindUnique.mockResolvedValue({
+      paragraph: "cached paragraph",
+      matchedChips: ["ATECO compatibile"],
+      matchScore: 90,
+      rulesScore: 95,
+      semanticScore: 80,
+      computedAt: new Date(),
+    });
+
+    const result = await getMatchExplanation("u1", "g1");
+    expect(result.fromCache).toBe(true);
+    expect(result.paragraph).toBe("cached paragraph");
+    expect(mockGenerateExplanation).not.toHaveBeenCalled();
+  });
+
+  it("calls OpenAI on cache miss and upserts the row", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "u1", role: "COMPANY" } });
+    mockProfileFindUnique.mockResolvedValue(explProfile);
+    mockGrantsRaw.mockResolvedValue([explGrant]);
+    mockSimilarityRaw.mockResolvedValue([{ id: "g1", similarity: 0.8 }]);
+    mockExplFindUnique.mockResolvedValue(null);
+    mockGrantFindUnique.mockResolvedValue(explGrant);
+    mockGenerateExplanation.mockResolvedValue("AI generated paragraph");
+    mockExplUpsert.mockResolvedValue({});
+
+    const result = await getMatchExplanation("u1", "g1");
+    expect(result.fromCache).toBe(false);
+    expect(result.paragraph).toBe("AI generated paragraph");
+    expect(mockGenerateExplanation).toHaveBeenCalledTimes(1);
+    expect(mockExplUpsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("invalidates a row older than 30 days and recomputes", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "u1", role: "COMPANY" } });
+    mockProfileFindUnique.mockResolvedValue(explProfile);
+    mockGrantsRaw.mockResolvedValue([explGrant]);
+    mockSimilarityRaw.mockResolvedValue([{ id: "g1", similarity: 0.8 }]);
+    const oldDate = new Date(Date.now() - 31 * 86400000);
+    mockExplFindUnique.mockResolvedValue({
+      paragraph: "stale",
+      matchedChips: [],
+      matchScore: 50,
+      rulesScore: 50,
+      semanticScore: 50,
+      computedAt: oldDate,
+    });
+    mockGrantFindUnique.mockResolvedValue(explGrant);
+    mockGenerateExplanation.mockResolvedValue("fresh paragraph");
+    mockExplUpsert.mockResolvedValue({});
+
+    const result = await getMatchExplanation("u1", "g1");
+    expect(result.fromCache).toBe(false);
+    expect(result.paragraph).toBe("fresh paragraph");
   });
 });

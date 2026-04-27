@@ -8,7 +8,10 @@ import {
   deriveChips,
   type MatchScore,
 } from "@/lib/services/matching";
+import { generateExplanation } from "@/lib/services/match-explanation";
 import type { CompanySize, Grant } from "@finagevolata/db";
+
+const EXPLANATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 type Role = "ADMIN" | "CONSULTANT" | "COMPANY";
 
@@ -168,4 +171,76 @@ export async function getTopMatchesForDashboard(
   limit = 5
 ): Promise<Array<{ grant: Grant; score: MatchScore }>> {
   return matchGrantsForCompany(companyId, { limit });
+}
+
+export async function getMatchExplanation(
+  companyId: string,
+  grantId: string
+): Promise<{
+  paragraph: string;
+  chips: MatchScore["chips"];
+  score: MatchScore;
+  fromCache: boolean;
+}> {
+  const score = await getMatchScoreForGrant(companyId, grantId);
+  if (!score) throw new Error("Bando non eleggibile per questa azienda");
+
+  const cached = await prisma.grantMatchExplanation.findUnique({
+    where: { companyId_grantId: { companyId, grantId } },
+  });
+
+  const isFresh =
+    cached && Date.now() - cached.computedAt.getTime() < EXPLANATION_TTL_MS;
+
+  if (cached && isFresh) {
+    return {
+      paragraph: cached.paragraph,
+      chips: cached.matchedChips as MatchScore["chips"],
+      score,
+      fromCache: true,
+    };
+  }
+
+  const profile = await prisma.companyProfile.findUnique({ where: { userId: companyId } });
+  const grant = await prisma.grant.findUnique({ where: { id: grantId } });
+  if (!profile || !grant) throw new Error("Dati non disponibili");
+
+  const paragraph =
+    (await generateExplanation({
+      companyName: profile.companyName,
+      atecoCode: profile.atecoCode,
+      atecoDescription: profile.atecoDescription,
+      region: profile.region,
+      employeeCount: profile.employeeCount,
+      grantTitle: grant.title,
+      issuingBody: grant.issuingBody,
+      minAmount: grant.minAmount == null ? null : Number(grant.minAmount),
+      maxAmount: grant.maxAmount == null ? null : Number(grant.maxAmount),
+      deadline: grant.deadline,
+      matchScore: score.total,
+      chips: score.chips,
+    })) ?? "Non e' stato possibile generare la spiegazione automatica.";
+
+  await prisma.grantMatchExplanation.upsert({
+    where: { companyId_grantId: { companyId, grantId } },
+    create: {
+      companyId,
+      grantId,
+      matchScore: score.total,
+      rulesScore: score.rulesScore,
+      semanticScore: score.semanticScore,
+      matchedChips: score.chips,
+      paragraph,
+    },
+    update: {
+      matchScore: score.total,
+      rulesScore: score.rulesScore,
+      semanticScore: score.semanticScore,
+      matchedChips: score.chips,
+      paragraph,
+      computedAt: new Date(),
+    },
+  });
+
+  return { paragraph, chips: score.chips, score, fromCache: false };
 }
