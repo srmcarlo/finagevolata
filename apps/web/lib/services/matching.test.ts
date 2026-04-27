@@ -149,3 +149,53 @@ describe("computeRulesScore", () => {
     expect(r.breakdown.ateco).toBe(20);
   });
 });
+
+import { combineScores, deriveChips } from "./matching";
+
+describe("combineScores", () => {
+  it("uses default weight 0.6 rules + 0.4 semantic", () => {
+    expect(combineScores(100, 50)).toBe(80); // 0.6*100 + 0.4*50 = 80
+  });
+  it("rounds to nearest integer", () => {
+    expect(combineScores(75, 73)).toBe(74); // 45 + 29.2 = 74.2 → 74
+  });
+  it("accepts a custom weight override", () => {
+    expect(combineScores(100, 0, 0.7)).toBe(70);
+  });
+});
+
+describe("deriveChips", () => {
+  const fullBreakdown = { ateco: 30, size: 25, amount: 20, deadline: 15, approval: 10 };
+
+  it("emits all chips when criteria pass", () => {
+    expect(deriveChips(fullBreakdown, 80, true)).toEqual([
+      "ATECO compatibile",
+      "Dimensione adatta",
+      "Importo nel range",
+      "Tempistica OK",
+      "Settore affine",
+      "Approvato",
+    ]);
+  });
+
+  it("hides ATECO chip when ateco < 20", () => {
+    expect(deriveChips({ ...fullBreakdown, ateco: 10 }, 80, true)).not.toContain("ATECO compatibile");
+  });
+
+  it("hides Dimensione chip when size != 25 (adjacent or none)", () => {
+    expect(deriveChips({ ...fullBreakdown, size: 15 }, 80, true)).not.toContain("Dimensione adatta");
+  });
+
+  it("hides Settore affine chip when semanticScore < 70", () => {
+    expect(deriveChips(fullBreakdown, 65, true)).not.toContain("Settore affine");
+  });
+
+  it("hides Approvato when approvedByAdmin is false", () => {
+    expect(deriveChips(fullBreakdown, 80, false)).not.toContain("Approvato");
+  });
+
+  it("preserves order regardless of input", () => {
+    const chips = deriveChips({ ateco: 30, size: 25, amount: 0, deadline: 15, approval: 10 }, 80, true);
+    expect(chips).toEqual(["ATECO compatibile", "Dimensione adatta", "Tempistica OK", "Settore affine", "Approvato"]);
+  });
+});

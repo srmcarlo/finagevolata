@@ -119,3 +119,34 @@ export function computeRulesScore(
   const score = breakdown.ateco + breakdown.size + breakdown.amount + breakdown.deadline + breakdown.approval;
   return { score, breakdown };
 }
+
+export function combineScores(
+  rulesScore: number,
+  semanticScore: number,
+  weightRules = 0.6
+): number {
+  return Math.round(weightRules * rulesScore + (1 - weightRules) * semanticScore);
+}
+
+export function deriveChips(
+  breakdown: MatchScoreBreakdown,
+  semanticScore: number,
+  approvedByAdmin: boolean
+): string[] {
+  const chips: string[] = [];
+  if (breakdown.ateco >= 20) chips.push("ATECO compatibile");
+  if (breakdown.size === 25) chips.push("Dimensione adatta");
+  if (breakdown.amount >= 15) chips.push("Importo nel range");
+  if (breakdown.deadline >= 10) chips.push("Tempistica OK");
+  if (semanticScore >= 70) chips.push("Settore affine");
+  if (approvedByAdmin) chips.push("Approvato");
+  return chips;
+}
+
+export interface MatchScore {
+  total: number;
+  rulesScore: number;
+  semanticScore: number;
+  breakdown: MatchScoreBreakdown;
+  chips: string[];
+}
