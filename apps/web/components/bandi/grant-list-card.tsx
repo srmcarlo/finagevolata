@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Grant } from "@finagevolata/db";
+import { MatchScoreBadge } from "@/components/matching/match-score-badge";
 
 interface Props {
   grant: Grant;
   href: string;
+  matchScore?: number;
 }
 
-export function GrantListCard({ grant, href }: Props) {
+export function GrantListCard({ grant, href, matchScore }: Props) {
   const daysLeft = grant.deadline
     ? Math.ceil((grant.deadline.getTime() - Date.now()) / 86400_000)
     : null;
@@ -30,6 +32,9 @@ export function GrantListCard({ grant, href }: Props) {
           <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">
             Click Day
           </span>
+        ) : null}
+        {typeof matchScore === "number" ? (
+          <MatchScoreBadge score={matchScore} className="ml-auto" />
         ) : null}
       </div>
       <h3 className="mb-1 text-lg font-semibold text-slate-900">{grant.title}</h3>

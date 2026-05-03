@@ -16,6 +16,7 @@ import {
   sendGrantRejectedEmail,
 } from "@/lib/email";
 import { findSemanticMatches } from "@/lib/services/ai";
+import { invalidateMatchExplanations } from "@/lib/actions/matching";
 
 type Role = "ADMIN" | "CONSULTANT" | "COMPANY";
 
@@ -112,6 +113,8 @@ export async function updateGrant(id: string, input: GrantUpdateInput) {
     }
   });
 
+  await invalidateMatchExplanations({ grantId: id });
+
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
   if (role === "CONSULTANT") revalidatePath(`/consulente/bandi/${id}`);
@@ -129,6 +132,7 @@ export async function approveGrant(id: string) {
     where: { id },
     data: { approvedByAdmin: true },
   });
+  await invalidateMatchExplanations({ grantId: id });
   revalidatePath("/admin/bandi");
   revalidatePath("/admin/bandi/queue");
   revalidatePath(`/admin/bandi/${id}`);
@@ -164,6 +168,7 @@ export async function publishGrant(id: string) {
     where: { id },
     data: { status: "PUBLISHED", approvedByAdmin: true },
   });
+  await invalidateMatchExplanations({ grantId: id });
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
   revalidatePath("/azienda/bandi");
@@ -176,6 +181,7 @@ export async function closeGrant(id: string) {
     where: { id },
     data: { status: "CLOSED" },
   });
+  await invalidateMatchExplanations({ grantId: id });
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
 }

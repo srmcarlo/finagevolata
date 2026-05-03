@@ -126,6 +126,7 @@ model User {
   notifications         Notification[]
   sentMessages          PracticeMessage[]
   activities            PracticeActivity[]
+  grantMatches          GrantMatchExplanation[] @relation("CompanyMatches")
 
   @@map("users")
 }
@@ -191,6 +192,7 @@ model Grant {
   documentRequirements GrantDocumentRequirement[]
   practices            Practice[]
   chunks               GrantChunk[]
+  matchExplanations    GrantMatchExplanation[]
 
   @@map("grants")
 }
@@ -389,4 +391,23 @@ model ContactLead {
   @@index([createdAt])
   @@index([ipHash, createdAt])
   @@map("contact_leads")
+}
+
+model GrantMatchExplanation {
+  id            String   @id @default(cuid())
+  companyId     String
+  grantId       String
+  matchScore    Int
+  rulesScore    Int
+  semanticScore Int
+  matchedChips  String[]
+  paragraph     String   @db.Text
+  computedAt    DateTime @default(now())
+
+  company User  @relation("CompanyMatches", fields: [companyId], references: [id], onDelete: Cascade)
+  grant   Grant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, grantId])
+  @@index([companyId, computedAt])
+  @@map("grant_match_explanations")
 }
