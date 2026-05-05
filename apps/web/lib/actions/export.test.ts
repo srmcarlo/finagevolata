@@ -1,4 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+
+const ORIGINAL_MOUSEX_EMAIL = process.env.MOUSEX_EMAIL;
+afterAll(() => {
+  if (ORIGINAL_MOUSEX_EMAIL === undefined) delete process.env.MOUSEX_EMAIL;
+  else process.env.MOUSEX_EMAIL = ORIGINAL_MOUSEX_EMAIL;
+});
 
 const mockAuth = vi.fn();
 const mockPracticeFindUnique = vi.fn();
@@ -100,7 +106,7 @@ describe("exportForClickDay", () => {
       consultantId: "other",
     });
     const r = await exportForClickDay("p1");
-    expect(r).toHaveProperty("error");
+    expect(r).toEqual({ error: "Pratica non trovata" });
   });
 
   it("rejects when grant has no Click Day", async () => {
@@ -126,7 +132,9 @@ describe("exportForClickDay", () => {
       ],
     });
     const r = await exportForClickDay("p1");
-    expect(r).toHaveProperty("error");
+    expect(r).toEqual({
+      error: expect.stringContaining("documenti devono essere approvati"),
+    });
   });
 
   it("rejects when MOUSEX_EMAIL is missing", async () => {
@@ -137,7 +145,9 @@ describe("exportForClickDay", () => {
 
   it("rejects notes longer than 500 chars", async () => {
     const r = await exportForClickDay("p1", "x".repeat(501));
-    expect(r).toHaveProperty("error");
+    expect(r).toEqual({
+      error: expect.stringContaining("500"),
+    });
   });
 
   it("does NOT mutate clickDayStatus when email send fails", async () => {
