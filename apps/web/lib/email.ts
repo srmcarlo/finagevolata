@@ -4,10 +4,12 @@ import { getBaseUrl } from "@/lib/base-url";
 
 export async function sendEmail({
   to,
+  cc,
   subject,
   text,
 }: {
   to: string;
+  cc?: string | string[];
   subject: string;
   text: string;
 }) {
@@ -22,6 +24,7 @@ export async function sendEmail({
     const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || "onboarding@resend.dev",
       to,
+      ...(cc ? { cc } : {}),
       subject,
       text,
     });
@@ -187,4 +190,21 @@ Puoi riproporlo con le modifiche necessarie.
     subject: `Bando "${grantTitle}" non approvato`,
     text,
   });
+}
+
+export async function sendClickDayRequestEmail({
+  to,
+  cc,
+  grantTitle,
+  companyName,
+  text,
+}: {
+  to: string;
+  cc: string;
+  grantTitle: string;
+  companyName: string;
+  text: string;
+}) {
+  const subject = `[Click Day] ${grantTitle} — ${companyName}`;
+  return sendEmail({ to, cc, subject, text });
 }
