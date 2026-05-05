@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeLinkExpirySeconds } from "./click-day-export";
-import { buildClickDayEmailText } from "./click-day-export";
+import { buildClickDayEmailText, computeLinkExpirySeconds } from "./click-day-export";
 
 const SEVEN_DAYS = 7 * 86400;
 const ONE_HOUR = 3600;
