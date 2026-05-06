@@ -11,6 +11,7 @@ import { PracticeChat } from "@/components/practice-chat";
 import { AIDocumentValidator } from "@/components/ai-document-validator";
 import { ViewDocumentButton } from "@/components/view-document-button";
 import { DocumentReviewForm } from "@/components/document-review-form";
+import { ClickDaySection } from "@/components/click-day-section";
 
 const PRACTICE_STATUSES = [
   { value: "DOCUMENTS_PENDING", label: "Documenti in attesa" },
@@ -43,6 +44,23 @@ export default async function ConsultantPracticeDetailPage({ params }: { params:
   const companyName = practiceData.company.companyProfile?.companyName || practiceData.company.name;
   const consultantName = practiceData.consultant.consultantProfile?.firmName || practiceData.consultant.name;
   const uploadedDocs = practiceData.documents.filter((d: any) => d.status === "UPLOADED");
+
+  const allDocs = practiceData.documents as Array<{ status: string }>;
+  const documentsAllApproved =
+    allDocs.length > 0 && allDocs.every((d) => d.status === "APPROVED");
+  const pendingDocCount = allDocs.filter((d) => d.status !== "APPROVED").length;
+  const lastClickDayActivity = ((practiceData.activities ?? []) as Array<{
+    type: string;
+    createdAt: Date | string;
+  }>)
+    .filter((a) => a.type === "CLICKDAY_EXPORT")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+  const lastExportAt = lastClickDayActivity
+    ? new Date(lastClickDayActivity.createdAt)
+    : null;
 
   return (
     <div className="max-w-5xl">
@@ -115,6 +133,18 @@ export default async function ConsultantPracticeDetailPage({ params }: { params:
         ) : (
           <DocumentChecklist documents={practiceData.documents} isConsultant />
         )}
+      </div>
+
+      {/* Click Day */}
+      <div className="mb-6">
+        <ClickDaySection
+          practiceId={id}
+          hasClickDay={practiceData.grant.hasClickDay}
+          clickDayStatus={practiceData.clickDayStatus}
+          lastExportAt={lastExportAt}
+          documentsAllApproved={documentsAllApproved}
+          pendingDocCount={pendingDocCount}
+        />
       </div>
 
       {/* Chat & Timeline side by side */}

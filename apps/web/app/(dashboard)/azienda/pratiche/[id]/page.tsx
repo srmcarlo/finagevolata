@@ -29,6 +29,16 @@ export default async function AziendaPracticeDetailPage({ params }: { params: Pr
     (d: any) => d.status === "MISSING" || d.status === "REJECTED"
   );
 
+  const lastClickDayActivity = ((practiceData.activities ?? []) as Array<{
+    type: string;
+    createdAt: Date | string;
+  }>)
+    .filter((a) => a.type === "CLICKDAY_EXPORT")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+
   return (
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-6">
@@ -60,6 +70,18 @@ export default async function AziendaPracticeDetailPage({ params }: { params: Pr
           <p className="text-sm text-gray-500 mt-3">Azienda: {companyName}</p>
         </div>
       </div>
+
+      {practiceData.clickDayStatus !== "NONE" && lastClickDayActivity ? (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p className="text-sm font-medium text-blue-900">
+            Richiesta Click Day inviata al partner MouseX il{" "}
+            {new Date(lastClickDayActivity.createdAt).toLocaleString("it-IT")}.
+          </p>
+          <p className="mt-1 text-xs text-blue-700">
+            Il consulente ti aggiornerà sull'esito.
+          </p>
+        </div>
+      ) : null}
 
       {/* Document checklist */}
       <div className="rounded-lg border bg-white p-6 mb-6">
