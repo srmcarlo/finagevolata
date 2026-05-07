@@ -100,9 +100,10 @@ export async function exportForClickDay(practiceId: string, notes: string = "") 
     linkExpiry,
   });
 
+  const sendCc = process.env.RESEND_TESTING_MODE !== "true";
   const emailResult = await sendClickDayRequestEmail({
     to: mousexEmail,
-    cc: practice.consultant.email,
+    ...(sendCc ? { cc: practice.consultant.email } : {}),
     grantTitle: practice.grant.title,
     companyName: profile.companyName,
     text,

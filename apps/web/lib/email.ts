@@ -200,11 +200,11 @@ export async function sendClickDayRequestEmail({
   text,
 }: {
   to: string;
-  cc: string;
+  cc?: string;
   grantTitle: string;
   companyName: string;
   text: string;
 }) {
   const subject = `[Click Day] ${grantTitle} — ${companyName}`;
-  return sendEmail({ to, cc, subject, text });
+  return sendEmail({ to, ...(cc ? { cc } : {}), subject, text });
 }
