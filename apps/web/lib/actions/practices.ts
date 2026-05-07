@@ -76,7 +76,13 @@ export async function getPractice(id: string) {
   const role = (session?.user as any)?.role;
   const practice = await prisma.practice.findUnique({
     where: { id },
-    include: { grant: true, company: { include: { companyProfile: true } }, consultant: { include: { consultantProfile: true } }, documents: { include: { documentType: true, reviewedBy: true }, orderBy: { documentType: { name: "asc" } } } },
+    include: {
+      grant: true,
+      company: { include: { companyProfile: true } },
+      consultant: { include: { consultantProfile: true } },
+      documents: { include: { documentType: true, reviewedBy: true }, orderBy: { documentType: { name: "asc" } } },
+      activities: { where: { type: "CLICKDAY_EXPORT" }, orderBy: { createdAt: "desc" }, take: 5 },
+    },
   });
   if (!practice) return null;
   if (role === "CONSULTANT" && practice.consultantId !== userId) return null;
