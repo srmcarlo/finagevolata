@@ -2,5 +2,5 @@
   "buildCommand": "turbo run build --filter=@finagevolata/web",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "regions": ["fra1"]
+  "regions": ["dub1"]
 }
