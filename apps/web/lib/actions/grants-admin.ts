@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 
 export async function createGrantWithDocuments(formData: FormData) {
   const session = await auth();
@@ -52,6 +54,8 @@ export async function createGrantWithDocuments(formData: FormData) {
       },
     },
   });
+
+  revalidateTag(cacheTags.grantsPublished());
 
   return { success: true };
 }

@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 import { companyOnboardingSchema } from "@finagevolata/shared";
 import { z } from "zod";
 
@@ -47,6 +49,9 @@ export async function updateCompanyProfile(formData: FormData) {
     where: { userId },
     data: parsed.data,
   });
+
+  revalidateTag(cacheTags.profile(userId));
+  revalidateTag(cacheTags.matches(userId));
 
   return { success: true };
 }

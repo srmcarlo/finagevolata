@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 import { createServerSupabase } from "@/lib/supabase";
 import { documentReviewSchema } from "@finagevolata/shared";
 import { sendDocumentUploadedEmail, sendDocumentReviewedEmail } from "@/lib/email";
@@ -111,6 +112,8 @@ export async function uploadDocument(practiceDocId: string, formData: FormData) 
       console.error("[Email] Upload notification failed:", e)
     );
 
+    revalidateTag(cacheTags.counts(practiceDoc.practice.companyId));
+
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -196,6 +199,7 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
       console.error("[Email] Review notification failed:", e)
     );
 
+    revalidateTag(cacheTags.counts(companyId));
     revalidatePath(`/consulente/pratiche/${practiceDoc.practiceId}`);
     revalidatePath(`/azienda/pratiche/${practiceDoc.practiceId}`);
 
@@ -282,9 +286,11 @@ export async function aiValidateDocument(practiceDocId: string) {
     }),
   ]);
 
-  return { 
-    success: true, 
-    status: newStatus, 
-    notes: result.notes 
+  revalidateTag(cacheTags.counts(practiceDoc.practice.companyId));
+
+  return {
+    success: true,
+    status: newStatus,
+    notes: result.notes
   };
 }

@@ -34,7 +34,7 @@ vi.mock("@/lib/email", () => ({
   sendGrantSubmittedEmail: (...a: any[]) => mockSendSubmitted(...a),
   sendGrantRejectedEmail: (...a: any[]) => mockSendRejected(...a),
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 
 import {
   createGrant,

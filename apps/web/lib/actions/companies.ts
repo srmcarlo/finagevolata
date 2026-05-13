@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 import { companyOnboardingSchema, companyInviteSchema } from "@finagevolata/shared";
 
 export async function completeOnboarding(formData: FormData) {
@@ -33,12 +35,16 @@ export async function completeOnboarding(formData: FormData) {
     return { error: "Partita IVA già registrata" };
   }
 
+  const userId = (session.user as any).id;
   await prisma.companyProfile.create({
     data: {
-      userId: (session.user as any).id,
+      userId,
       ...parsed.data,
     },
   });
+
+  revalidateTag(cacheTags.profile(userId));
+  revalidateTag(cacheTags.matches(userId));
 
   return { success: true };
 }

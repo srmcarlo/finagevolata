@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 import { practiceCreateSchema } from "@finagevolata/shared";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -56,6 +58,9 @@ export async function createPractice(formData: FormData) {
       },
     },
   });
+
+  revalidateTag(cacheTags.counts(parsed.data.companyId));
+
   return { success: true, practiceId: practice.id };
 }
 
