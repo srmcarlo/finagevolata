@@ -13,7 +13,7 @@ export async function PracticeChatSection({
     <PracticeChat
       practiceId={practiceId}
       messages={messages as any}
-      currentUserId={currentUserId}
+      currentUserId={currentUserId as string}
     />
   );
 }
