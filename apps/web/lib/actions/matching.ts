@@ -78,19 +78,12 @@ async function loadSimilarities(
   return new Map(rows.map((r) => [r.id, r.similarity]));
 }
 
-export async function matchGrantsForCompany(
+// Pure compute — no auth, no cookies. Safe to call inside `unstable_cache`.
+// Callers MUST authorize the companyId externally before invoking this.
+export async function _computeMatchesForCompany(
   companyId: string,
   opts?: { limit?: number; offset?: number; minScore?: number }
 ): Promise<Array<{ grant: Grant; score: MatchScore }>> {
-  const { userId, role } = await requireSession(["ADMIN", "CONSULTANT", "COMPANY"]);
-  if (role === "COMPANY" && userId !== companyId) throw new Error("Non autorizzato");
-  if (role === "CONSULTANT") {
-    const link = await prisma.consultantCompany.findFirst({
-      where: { consultantId: userId, companyId, status: "ACTIVE" },
-    });
-    if (!link) throw new Error("Non autorizzato");
-  }
-
   const profile = await prisma.companyProfile.findUnique({ where: { userId: companyId } });
   if (!profile) return [];
 
@@ -142,6 +135,22 @@ export async function matchGrantsForCompany(
   const offset = opts?.offset ?? 0;
   const limit = opts?.limit ?? scored.length;
   return scored.slice(offset, offset + limit);
+}
+
+export async function matchGrantsForCompany(
+  companyId: string,
+  opts?: { limit?: number; offset?: number; minScore?: number }
+): Promise<Array<{ grant: Grant; score: MatchScore }>> {
+  const { userId, role } = await requireSession(["ADMIN", "CONSULTANT", "COMPANY"]);
+  if (role === "COMPANY" && userId !== companyId) throw new Error("Non autorizzato");
+  if (role === "CONSULTANT") {
+    const link = await prisma.consultantCompany.findFirst({
+      where: { consultantId: userId, companyId, status: "ACTIVE" },
+    });
+    if (!link) throw new Error("Non autorizzato");
+  }
+
+  return _computeMatchesForCompany(companyId, opts);
 }
 
 export async function getMatchScoresForGrants(

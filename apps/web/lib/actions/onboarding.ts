@@ -2,8 +2,10 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cacheTags } from "@/lib/cache/keys";
 import { invalidateMatchExplanations } from "@/lib/actions/matching";
 
 const CompanyProfileSchema = z.object({
@@ -33,6 +35,8 @@ export async function saveCompanyProfile(formData: FormData) {
   });
 
   await invalidateMatchExplanations({ companyId: userId });
+
+  revalidateTag(cacheTags.matches(userId));
 
   return { success: true };
 }

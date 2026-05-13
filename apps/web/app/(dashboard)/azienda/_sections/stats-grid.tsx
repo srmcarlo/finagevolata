@@ -1,15 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import { getCachedCompanyCounts } from "@/lib/cache/counts";
 
 export async function StatsGrid({ userId }: { userId: string }) {
-  const [practiceCount, missingDocs, rejectedDocs] = await Promise.all([
-    prisma.practice.count({ where: { companyId: userId } }),
-    prisma.practiceDocument.count({
-      where: { practice: { companyId: userId }, status: "MISSING" },
-    }),
-    prisma.practiceDocument.count({
-      where: { practice: { companyId: userId }, status: "REJECTED" },
-    }),
-  ]);
+  const { practiceCount, missingDocs, rejectedDocs } = await getCachedCompanyCounts(userId);
 
   return (
     <div className="grid grid-cols-3 gap-4">

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getTopMatchesForDashboard } from "@/lib/actions/matching";
+import { getCachedTopMatches } from "@/lib/cache/matches";
 import { MatchScoreBadge } from "@/components/matching/match-score-badge";
 import { MatchChips } from "@/components/matching/match-chips";
 
 export async function TopMatches({ userId }: { userId: string }) {
-  const topMatches = await getTopMatchesForDashboard(userId, 5).catch(() => []);
+  const topMatches = await getCachedTopMatches(userId, 5).catch(() => []);
 
   return (
     <section className="mt-8">
