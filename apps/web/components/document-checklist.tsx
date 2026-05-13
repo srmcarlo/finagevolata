@@ -37,7 +37,7 @@ export function DocumentChecklist({
       </div>
       <div className="space-y-2">
         {documents.map((doc) => (
-          <ChecklistItem key={doc.id} doc={doc} isConsultant={isConsultant} />
+          <ChecklistItem key={`${doc.id}-${doc.status}`} doc={doc} isConsultant={isConsultant} />
         ))}
       </div>
     </div>
