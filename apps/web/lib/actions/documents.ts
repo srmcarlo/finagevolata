@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createServerSupabase } from "@/lib/supabase";
@@ -194,6 +195,9 @@ export async function reviewDocument(practiceDocId: string, formData: FormData) 
     sendDocumentReviewedEmail(companyEmail, docName, isApproved, parsed.data.rejectionReason).catch((e) =>
       console.error("[Email] Review notification failed:", e)
     );
+
+    revalidatePath(`/consulente/pratiche/${practiceDoc.practiceId}`);
+    revalidatePath(`/azienda/pratiche/${practiceDoc.practiceId}`);
 
     return { success: true };
   } catch (err) {
