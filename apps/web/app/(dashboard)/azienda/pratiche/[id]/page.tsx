@@ -1,22 +1,19 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getPractice } from "@/lib/actions/practices";
-import { getMessages } from "@/lib/actions/chat";
 import { PracticeStatusBadge } from "@/components/practice-status-badge";
 import { DocumentChecklist } from "@/components/document-checklist";
-import { PracticeTimeline } from "@/components/practice-timeline";
-import { PracticeChat } from "@/components/practice-chat";
 import { DocumentUploadSection } from "./document-upload-section";
 import { AIAssistant } from "@/components/ai-assistant";
+import { ChatSkeleton, TimelineSkeleton } from "@/components/skeletons";
+import { PracticeChatSection } from "./_sections/practice-chat-section";
+import { PracticeTimelineSection } from "./_sections/practice-timeline-section";
 
 export default async function AziendaPracticeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [practice, session, messages] = await Promise.all([
-    getPractice(id),
-    auth(),
-    getMessages(id),
-  ]);
+  const [practice, session] = await Promise.all([getPractice(id), auth()]);
   if (!practice) notFound();
 
   const currentUserId = (session?.user as any)?.id;
@@ -108,17 +105,21 @@ export default async function AziendaPracticeDetailPage({ params }: { params: Pr
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="rounded-lg border bg-white p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Messaggi con il Consulente</h2>
-          <PracticeChat practiceId={id} messages={messages as any} currentUserId={currentUserId} />
+          <Suspense fallback={<ChatSkeleton />}>
+            <PracticeChatSection practiceId={id} currentUserId={currentUserId} />
+          </Suspense>
         </div>
         <div className="rounded-lg border bg-white p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Attivita</h2>
-          <PracticeTimeline practiceId={id} />
+          <Suspense fallback={<TimelineSkeleton />}>
+            <PracticeTimelineSection practiceId={id} />
+          </Suspense>
         </div>
       </div>
 
-      <AIAssistant 
-        practiceId={id} 
-        grantTitle={practiceData.grant.title} 
+      <AIAssistant
+        practiceId={id}
+        grantTitle={practiceData.grant.title}
       />
     </div>
   );
