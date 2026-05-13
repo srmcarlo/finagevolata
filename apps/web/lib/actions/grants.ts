@@ -3,8 +3,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath, revalidateTag } from "next/cache";
-import { cacheTags } from "@/lib/cache/keys";
+import { revalidatePath } from "next/cache";
 import {
   grantCreateSchema,
   grantUpdateSchema,
@@ -116,7 +115,6 @@ export async function updateGrant(id: string, input: GrantUpdateInput) {
 
   await invalidateMatchExplanations({ grantId: id });
 
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
   if (role === "CONSULTANT") revalidatePath(`/consulente/bandi/${id}`);
@@ -125,7 +123,6 @@ export async function updateGrant(id: string, input: GrantUpdateInput) {
 export async function deleteGrant(id: string) {
   await requireSession(["ADMIN"]);
   await prisma.grant.delete({ where: { id } });
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath("/admin/bandi");
 }
 
@@ -136,7 +133,6 @@ export async function approveGrant(id: string) {
     data: { approvedByAdmin: true },
   });
   await invalidateMatchExplanations({ grantId: id });
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath("/admin/bandi");
   revalidatePath("/admin/bandi/queue");
   revalidatePath(`/admin/bandi/${id}`);
@@ -162,7 +158,6 @@ export async function rejectGrant(id: string, reason: string) {
     reason,
   }).catch((err) => console.error("Reject email failed:", err));
 
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath("/admin/bandi/queue");
   revalidatePath("/admin/bandi");
 }
@@ -174,7 +169,6 @@ export async function publishGrant(id: string) {
     data: { status: "PUBLISHED", approvedByAdmin: true },
   });
   await invalidateMatchExplanations({ grantId: id });
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
   revalidatePath("/azienda/bandi");
@@ -188,7 +182,6 @@ export async function closeGrant(id: string) {
     data: { status: "CLOSED" },
   });
   await invalidateMatchExplanations({ grantId: id });
-  revalidateTag(cacheTags.grantsPublished());
   revalidatePath(`/admin/bandi/${id}`);
   revalidatePath("/admin/bandi");
 }

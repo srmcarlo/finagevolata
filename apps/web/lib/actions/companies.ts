@@ -43,7 +43,6 @@ export async function completeOnboarding(formData: FormData) {
     },
   });
 
-  revalidateTag(cacheTags.profile(userId));
   revalidateTag(cacheTags.matches(userId));
 
   return { success: true };

@@ -50,7 +50,6 @@ export async function updateCompanyProfile(formData: FormData) {
     data: parsed.data,
   });
 
-  revalidateTag(cacheTags.profile(userId));
   revalidateTag(cacheTags.matches(userId));
 
   return { success: true };

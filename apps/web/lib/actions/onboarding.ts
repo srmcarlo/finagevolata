@@ -36,7 +36,6 @@ export async function saveCompanyProfile(formData: FormData) {
 
   await invalidateMatchExplanations({ companyId: userId });
 
-  revalidateTag(cacheTags.profile(userId));
   revalidateTag(cacheTags.matches(userId));
 
   return { success: true };
