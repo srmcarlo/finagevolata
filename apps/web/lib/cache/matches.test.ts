@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetTopMatchesForDashboard = vi.fn();
+const mockComputeMatchesForCompany = vi.fn();
 const mockUnstableCache = vi.fn();
 
 vi.mock("@/lib/actions/matching", () => ({
-  getTopMatchesForDashboard: (...a: any[]) => mockGetTopMatchesForDashboard(...a),
+  _computeMatchesForCompany: (...a: any[]) => mockComputeMatchesForCompany(...a),
 }));
 
 vi.mock("next/cache", () => ({
@@ -18,12 +18,12 @@ import { getCachedTopMatches } from "./matches";
 
 describe("getCachedTopMatches", () => {
   beforeEach(() => {
-    mockGetTopMatchesForDashboard.mockReset();
+    mockComputeMatchesForCompany.mockReset();
     mockUnstableCache.mockReset();
   });
 
-  it("wraps getTopMatchesForDashboard with unstable_cache using a per-company key and tag", async () => {
-    mockGetTopMatchesForDashboard.mockResolvedValue([]);
+  it("wraps _computeMatchesForCompany with unstable_cache using a per-company key and tag", async () => {
+    mockComputeMatchesForCompany.mockResolvedValue([]);
     await getCachedTopMatches("company-1", 5);
 
     expect(mockUnstableCache).toHaveBeenCalledTimes(1);
@@ -33,11 +33,11 @@ describe("getCachedTopMatches", () => {
     expect(opts.tags).toEqual(["matches:company-1"]);
   });
 
-  it("delegates to getTopMatchesForDashboard with the right args", async () => {
-    mockGetTopMatchesForDashboard.mockResolvedValue([{ grant: { id: "g1" }, score: { total: 0.9 } }]);
+  it("delegates to _computeMatchesForCompany with the right args", async () => {
+    mockComputeMatchesForCompany.mockResolvedValue([{ grant: { id: "g1" }, score: { total: 0.9 } }]);
     const result = await getCachedTopMatches("company-2", 3);
 
-    expect(mockGetTopMatchesForDashboard).toHaveBeenCalledWith("company-2", 3);
+    expect(mockComputeMatchesForCompany).toHaveBeenCalledWith("company-2", { limit: 3 });
     expect(result).toEqual([{ grant: { id: "g1" }, score: { total: 0.9 } }]);
   });
 });
