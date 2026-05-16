@@ -7,11 +7,13 @@ export async function sendEmail({
   cc,
   subject,
   text,
+  html,
 }: {
   to: string;
   cc?: string | string[];
   subject: string;
   text: string;
+  html?: string;
 }) {
   if (!process.env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY non configurata. E-mail non inviata:", subject);
@@ -27,6 +29,7 @@ export async function sendEmail({
       ...(cc ? { cc } : {}),
       subject,
       text,
+      ...(html ? { html } : {}),
     });
 
     if (error) {
