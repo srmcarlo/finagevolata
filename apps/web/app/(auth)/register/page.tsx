@@ -30,6 +30,8 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const result = await registerUser(formData);
     if (result.error) {
       setError(result.error);
+    } else if (result.requiresVerification && result.email) {
+      router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
     } else {
       router.push("/login");
     }
