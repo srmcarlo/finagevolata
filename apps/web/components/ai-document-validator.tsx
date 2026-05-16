@@ -1,39 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { Brain, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Brain, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { aiValidateDocument } from "@/lib/actions/documents";
 
 export function AIDocumentValidator({ docId }: { docId: string }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ status: string; notes: string } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ isValid: boolean; notes: string } | null>(null);
 
   async function handleAIValidate() {
     setIsLoading(true);
-    setResult(null);
+    setSuggestion(null);
     try {
       const res = await aiValidateDocument(docId);
       if (res.success) {
-        setResult({ status: res.status!, notes: res.notes! });
+        setSuggestion({ isValid: res.isValid!, notes: res.notes! });
       } else {
         alert(`Errore AI: ${res.error}`);
       }
-    } catch (error) {
+    } catch {
       alert("Errore di rete o timeout durante l'analisi AI.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  if (result) {
-    const isApproved = result.status === "APPROVED";
+  if (suggestion) {
+    const ok = suggestion.isValid;
     return (
-      <div className={`mt-2 p-3 text-sm rounded-md border ${isApproved ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+      <div
+        className={`mt-2 p-3 text-sm rounded-md border ${
+          ok ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"
+        }`}
+      >
         <div className="flex items-center gap-2 font-medium mb-1">
-          {isApproved ? <CheckCircle size={16} /> : <XCircle size={16} />}
-          {isApproved ? "Documento approvato dall'AI" : "Problemi rilevati dall'AI"}
+          {ok ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+          {ok ? "AI suggerisce: approva" : "AI suggerisce: rifiuta"}
         </div>
-        <p className="text-xs leading-relaxed">{result.notes}</p>
+        <p className="text-xs leading-relaxed">{suggestion.notes}</p>
+        <p className="mt-2 text-xs italic opacity-80">
+          Il suggerimento e indicativo. Conferma o sovrascrivi con Approva/Rifiuta sopra.
+        </p>
       </div>
     );
   }
