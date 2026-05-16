@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildClickDayEmailText, computeLinkExpirySeconds } from "./click-day-export";
+import {
+  buildClickDayEmailHtml,
+  buildClickDayEmailText,
+  computeLinkExpirySeconds,
+} from "./click-day-export";
 
 const SEVEN_DAYS = 7 * 86400;
 const ONE_HOUR = 3600;
@@ -95,5 +99,77 @@ describe("buildClickDayEmailText", () => {
       grant: { ...baseInput.grant, clickDayDate: null },
     });
     expect(text).toContain("Da definire");
+  });
+});
+
+describe("buildClickDayEmailHtml", () => {
+  const baseInput = {
+    grant: {
+      title: "INAIL ISI 2026",
+      issuingBody: "INAIL",
+      clickDayDate: new Date("2026-06-15T09:00:00Z"),
+    },
+    company: {
+      companyName: "Acme Srl",
+      vatNumber: "12345678901",
+      legalForm: "SRL",
+      atecoCode: "62.01",
+      atecoDescription: "Produzione di software",
+      region: "Lombardia",
+      province: "MI",
+    },
+    documents: [
+      { name: "Visura Camerale", url: "https://signed/visura" },
+      { name: "DURC", url: "https://signed/durc" },
+    ],
+    consultant: { name: "Mario Rossi", email: "mario@studio.it" },
+    notes: "Priorità alta",
+    linkExpiry: new Date("2026-06-16T09:00:00Z"),
+  };
+
+  it("contains grant title (escaped)", () => {
+    const html = buildClickDayEmailHtml(baseInput);
+    expect(html).toContain("INAIL ISI 2026");
+  });
+
+  it("contains all documents with names and URLs", () => {
+    const html = buildClickDayEmailHtml(baseInput);
+    expect(html).toContain("Visura Camerale");
+    expect(html).toContain("https://signed/visura");
+    expect(html).toContain("DURC");
+    expect(html).toContain("https://signed/durc");
+  });
+
+  it("contains 'Note dal consulente' when notes non-empty", () => {
+    const html = buildClickDayEmailHtml(baseInput);
+    expect(html).toContain("Note dal consulente");
+    expect(html).toContain("Priorità alta");
+  });
+
+  it("omits 'Note dal consulente' when notes is empty string", () => {
+    const html = buildClickDayEmailHtml({ ...baseInput, notes: "" });
+    expect(html).not.toContain("Note dal consulente");
+  });
+
+  it("omits 'Note dal consulente' when notes is whitespace only", () => {
+    const html = buildClickDayEmailHtml({ ...baseInput, notes: "   \n\t  " });
+    expect(html).not.toContain("Note dal consulente");
+  });
+
+  it("escapes special characters in user content", () => {
+    const html = buildClickDayEmailHtml({
+      ...baseInput,
+      grant: { ...baseInput.grant, title: "<script>alert(1)</script>" },
+    });
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  it("shows 'Da definire' label when clickDayDate is null", () => {
+    const html = buildClickDayEmailHtml({
+      ...baseInput,
+      grant: { ...baseInput.grant, clickDayDate: null },
+    });
+    expect(html).toContain("Da definire");
   });
 });
