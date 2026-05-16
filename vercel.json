@@ -2,5 +2,11 @@
   "buildCommand": "turbo run build --filter=@finagevolata/web",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "regions": ["dub1"]
+  "regions": ["dub1"],
+  "crons": [
+    {
+      "path": "/api/cron/check-deadlines",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

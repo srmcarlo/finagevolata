@@ -411,3 +411,15 @@ model GrantMatchExplanation {
   @@index([companyId, computedAt])
   @@map("grant_match_explanations")
 }
+
+model ReminderLog {
+  id          String   @id @default(cuid())
+  kind        String
+  referenceId String
+  threshold   Int
+  sentAt      DateTime @default(now())
+
+  @@unique([kind, referenceId, threshold])
+  @@index([sentAt])
+  @@map("reminder_logs")
+}
