@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createServerSupabase } from "@/lib/supabase";
 import { sendClickDayRequestEmail } from "@/lib/email";
 import {
+  buildClickDayEmailHtml,
   buildClickDayEmailText,
   computeLinkExpirySeconds,
 } from "@/lib/services/click-day-export";
@@ -76,7 +77,7 @@ export async function exportForClickDay(practiceId: string, notes: string = "") 
     docsWithUrls.push({ name: doc.documentType.name, url: data.signedUrl });
   }
 
-  const text = buildClickDayEmailText({
+  const emailInput = {
     grant: {
       title: practice.grant.title,
       issuingBody: practice.grant.issuingBody,
@@ -98,7 +99,9 @@ export async function exportForClickDay(practiceId: string, notes: string = "") 
     },
     notes,
     linkExpiry,
-  });
+  };
+  const text = buildClickDayEmailText(emailInput);
+  const html = buildClickDayEmailHtml(emailInput);
 
   const sendCc = process.env.RESEND_TESTING_MODE !== "true";
   const emailResult = await sendClickDayRequestEmail({
@@ -106,7 +109,9 @@ export async function exportForClickDay(practiceId: string, notes: string = "") 
     ...(sendCc ? { cc: practice.consultant.email } : {}),
     grantTitle: practice.grant.title,
     companyName: profile.companyName,
+    clickDayDate: practice.grant.clickDayDate,
     text,
+    html,
   });
 
   if (!emailResult.success) {
