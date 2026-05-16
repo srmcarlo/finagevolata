@@ -71,14 +71,99 @@ export async function sendDocumentReviewedEmail(
 }
 
 /**
- * Notifica l'azienda che un bando scade a breve
+ * Reminder progressivo scadenza bando (30 / 15 / 7 / 1 giorno)
  */
-export async function sendGrantDeadlineAlert(companyEmail: string, grantTitle: string, deadline: string) {
-    return sendEmail({
-        to: companyEmail,
-        subject: `[Scadenza Bando] ${grantTitle}`,
-        text: `Il bando "${grantTitle}" scade il ${deadline}. Completa il caricamento dei documenti per non perdere l'opportunità.`
-    });
+export async function sendGrantDeadlineReminder({
+  to,
+  grantTitle,
+  daysLeft,
+}: {
+  to: string;
+  grantTitle: string;
+  daysLeft: number;
+}) {
+  const subject =
+    daysLeft <= 1
+      ? `[Scadenza imminente] ${grantTitle} scade domani`
+      : `[Promemoria] ${grantTitle} scade tra ${daysLeft} giorni`;
+  const text = `Il bando "${grantTitle}" scade tra ${daysLeft} ${daysLeft === 1 ? "giorno" : "giorni"}.\n\nAccedi al portale per completare il caricamento dei documenti.`;
+  return sendEmail({ to, subject, text });
+}
+
+/**
+ * Reminder scadenza documento (30 / 7 / 1 giorno)
+ */
+export async function sendDocExpiryReminder({
+  to,
+  documentName,
+  daysLeft,
+}: {
+  to: string;
+  documentName: string;
+  daysLeft: number;
+}) {
+  const subject =
+    daysLeft <= 1
+      ? `[Documento in scadenza] ${documentName} scade domani`
+      : `[Promemoria] ${documentName} scade tra ${daysLeft} giorni`;
+  const text = `Il documento "${documentName}" scadra tra ${daysLeft} ${daysLeft === 1 ? "giorno" : "giorni"}.\n\nRichiedi una versione aggiornata e caricala sul portale prima della scadenza.`;
+  return sendEmail({ to, subject, text });
+}
+
+/**
+ * Reminder documenti mancanti con scadenza bando entro 14 giorni
+ */
+export async function sendMissingDocsReminder({
+  to,
+  grantTitle,
+  missingCount,
+  daysToDeadline,
+}: {
+  to: string;
+  grantTitle: string;
+  missingCount: number;
+  daysToDeadline: number;
+}) {
+  const subject = `[Documenti mancanti] ${grantTitle} — ${missingCount} documenti da caricare`;
+  const text = `La pratica per il bando "${grantTitle}" ha ${missingCount} document${missingCount === 1 ? "o" : "i"} ancora da caricare. La scadenza del bando e tra ${daysToDeadline} giorni.\n\nAccedi al portale per completare i documenti.`;
+  return sendEmail({ to, subject, text });
+}
+
+/**
+ * Reminder Click Day imminente (7 / 3 / 1 giorno)
+ */
+export async function sendClickDayReminder({
+  to,
+  grantTitle,
+  daysLeft,
+}: {
+  to: string;
+  grantTitle: string;
+  daysLeft: number;
+}) {
+  const subject =
+    daysLeft <= 1
+      ? `[Click Day domani] ${grantTitle}`
+      : `[Click Day tra ${daysLeft} giorni] ${grantTitle}`;
+  const text = `Il Click Day per il bando "${grantTitle}" e previsto tra ${daysLeft} ${daysLeft === 1 ? "giorno" : "giorni"}.\n\nAssicurati che tutti i documenti siano approvati e che la richiesta a MouseX sia stata inviata.`;
+  return sendEmail({ to, subject, text });
+}
+
+/**
+ * Reminder aggregato per consulente: documenti UPLOADED in attesa di revisione > 3 giorni
+ */
+export async function sendPendingReviewReminder({
+  to,
+  pendingCount,
+  oldestDaysAgo,
+}: {
+  to: string;
+  pendingCount: number;
+  oldestDaysAgo: number;
+}) {
+  const subject = `[Documenti in attesa] ${pendingCount} document${pendingCount === 1 ? "o" : "i"} da revisionare`;
+  const text = `Hai ${pendingCount} document${pendingCount === 1 ? "o" : "i"} in attesa di revisione. Il piu vecchio e stato caricato ${oldestDaysAgo} giorni fa.\n\nAccedi al portale per completare la revisione.`;
+  return sendEmail({ to, subject, text });
 }
 
 export async function sendClientInviteEmail({
