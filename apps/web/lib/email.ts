@@ -286,13 +286,20 @@ export async function sendClickDayRequestEmail({
   grantTitle,
   companyName,
   text,
+  html,
+  clickDayDate,
 }: {
   to: string;
   cc?: string;
   grantTitle: string;
   companyName: string;
   text: string;
+  html?: string;
+  clickDayDate?: Date | null;
 }) {
-  const subject = `[Click Day] ${grantTitle} — ${companyName}`;
-  return sendEmail({ to, ...(cc ? { cc } : {}), subject, text });
+  const datePart = clickDayDate
+    ? ` — ${clickDayDate.toLocaleDateString("it-IT")}`
+    : "";
+  const subject = `[Click Day] ${grantTitle} — ${companyName}${datePart}`;
+  return sendEmail({ to, ...(cc ? { cc } : {}), subject, text, html });
 }
