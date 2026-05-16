@@ -10,6 +10,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const role = (req.auth?.user as any)?.role;
+  const emailVerified = (req.auth?.user as any)?.emailVerified;
+  const userEmail = req.auth?.user?.email;
 
   // Public invite acceptance — allow unauthenticated
   if (pathname.startsWith("/invite/")) {
@@ -17,12 +19,27 @@ export default auth((req) => {
   }
 
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isVerifyPage = pathname.startsWith("/verify-email");
   const isOnboarding = pathname.startsWith("/onboarding");
   const isDashboard =
     pathname.startsWith("/consulente") ||
     pathname.startsWith("/azienda") ||
     pathname.startsWith("/admin");
   const isPublicMarketing = PUBLIC_PATHS.has(pathname);
+
+  // /verify-email is always reachable for the verification flow (also when not logged in).
+  // If a verified, logged-in user lands here, bounce them to their dashboard.
+  if (isVerifyPage) {
+    if (isLoggedIn && emailVerified) {
+      const redirect =
+        role === "CONSULTANT" ? "/consulente" :
+        role === "ADMIN" ? "/admin" :
+        role === "COMPANY" ? "/azienda" :
+        "/";
+      return NextResponse.redirect(new URL(redirect, req.url));
+    }
+    return NextResponse.next();
+  }
 
   // Logged-in users on marketing homepage "/" → redirect to dashboard
   if (pathname === "/" && isLoggedIn) {
@@ -41,6 +58,12 @@ export default auth((req) => {
       role === "COMPANY" ? "/azienda" :
       role === "ADMIN" ? "/admin" : "/";
     return NextResponse.redirect(new URL(redirect, req.url));
+  }
+
+  // Hard gate: logged-in users with unverified email cannot touch onboarding or dashboards.
+  if (isLoggedIn && !emailVerified && (isOnboarding || isDashboard)) {
+    const qs = userEmail ? `?email=${encodeURIComponent(userEmail)}` : "";
+    return NextResponse.redirect(new URL(`/verify-email${qs}`, req.url));
   }
 
   // Onboarding: allow COMPANY + CONSULTANT (each wizard enforces role internally)

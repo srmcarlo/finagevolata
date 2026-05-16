@@ -2,7 +2,7 @@
 
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sendWelcomeEmail } from "@/lib/email";
+import { issueVerificationCode } from "@/lib/actions/email-verification";
 import { registerSchema, type PlanSlug } from "@finagevolata/shared";
 
 function slugToPlanEnum(slug: PlanSlug): "FREE" | "PRO_AZIENDA" | "CONSULENTE" | "STUDIO" {
@@ -43,14 +43,12 @@ export async function registerUser(formData: FormData) {
       },
     });
 
-    // Non-blocking: welcome email failure does not fail signup
-    sendWelcomeEmail({
-      to: created.email,
-      name: created.name,
-      role: created.role as "COMPANY" | "CONSULTANT",
-    }).catch((err) => console.error("Welcome email failed:", err));
+    // Trigger email verification flow: generate code, hash + store, dispatch email.
+    // Errors are logged inside issueVerificationCode; signup still succeeds so the
+    // user can request a new code from /verify-email.
+    await issueVerificationCode(created.id);
 
-    return { success: true };
+    return { success: true, requiresVerification: true, email: created.email };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[registerUser] fatal:", msg, err);

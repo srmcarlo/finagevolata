@@ -7,6 +7,7 @@ export default {
       if (user) {
         token.role = (user as any).role;
         token.id = (user as any).id;
+        token.emailVerified = !!(user as any).emailVerified;
       }
       return token;
     },
@@ -14,6 +15,7 @@ export default {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).emailVerified = (token as any).emailVerified;
       }
       return session;
     },

@@ -2,6 +2,15 @@
 import { Resend } from "resend";
 import { getBaseUrl } from "@/lib/base-url";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendEmail({
   to,
   cc,
@@ -278,6 +287,46 @@ Puoi riproporlo con le modifiche necessarie.
     subject: `Bando "${grantTitle}" non approvato`,
     text,
   });
+}
+
+/**
+ * Email contenente codice a 6 cifre per la verifica dell'indirizzo email
+ */
+export async function sendVerificationCodeEmail({
+  to,
+  name,
+  code,
+}: {
+  to: string;
+  name: string;
+  code: string;
+}) {
+  const subject = `Codice di verifica FinAgevolata: ${code}`;
+  const text = `Ciao ${name},\n\nIl tuo codice di verifica e: ${code}\n\nIl codice scade tra 15 minuti.\n\nSe non ti sei registrato su FinAgevolata, ignora questa email.\n\n— FinAgevolata`;
+  const html = `<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0;">
+  <tr><td align="center">
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+      <tr><td style="background:#4f46e5;padding:20px 24px;">
+        <div style="font-size:18px;font-weight:700;color:#fff;">FinAgevolata</div>
+        <div style="font-size:12px;color:#c7d2fe;margin-top:2px;">Verifica indirizzo email</div>
+      </td></tr>
+      <tr><td style="padding:24px;">
+        <p style="margin:0 0 12px;font-size:14px;color:#1e293b;">Ciao <strong>${escapeHtml(name)}</strong>,</p>
+        <p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.5;">Inserisci questo codice nella pagina di verifica per attivare il tuo account:</p>
+        <div style="text-align:center;background:#eef2ff;border:2px solid #6366f1;border-radius:8px;padding:20px;margin:16px 0;">
+          <div style="font-size:32px;font-weight:700;letter-spacing:.4em;color:#4338ca;font-family:monospace;">${escapeHtml(code)}</div>
+        </div>
+        <p style="margin:16px 0 0;font-size:12px;color:#64748b;line-height:1.5;">Il codice scade tra <strong>15 minuti</strong>. Se non hai richiesto questa verifica, ignora questa email.</p>
+      </td></tr>
+      <tr><td style="padding:14px 24px;background:#1e293b;color:#cbd5e1;font-size:11px;text-align:center;">FinAgevolata — Piattaforma finanza agevolata</td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+  return sendEmail({ to, subject, text, html });
 }
 
 export async function sendClickDayRequestEmail({

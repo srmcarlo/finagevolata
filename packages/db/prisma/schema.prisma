@@ -128,7 +128,23 @@ model User {
   activities            PracticeActivity[]
   grantMatches          GrantMatchExplanation[] @relation("CompanyMatches")
 
+  emailVerificationTokens EmailVerificationToken[]
+
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+  consumedAt DateTime?
+
+  @@index([userId, consumedAt])
+  @@map("email_verification_tokens")
 }
 
 model CompanyProfile {
