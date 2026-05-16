@@ -240,19 +240,19 @@ export async function aiValidateDocument(practiceDocId: string) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   const role = (session?.user as any)?.role;
-  
+
   if (!userId || (role !== "CONSULTANT" && role !== "ADMIN")) {
     return { error: "Non autorizzato" };
   }
 
   const practiceDoc = await prisma.practiceDocument.findUnique({
     where: { id: practiceDocId },
-    include: { 
-      practice: { include: { company: true } }, 
-      documentType: true 
+    include: {
+      practice: { include: { company: true } },
+      documentType: true,
     },
   });
-  
+
   if (!practiceDoc || !practiceDoc.filePath) {
     return { error: "Documento non trovato o file mancante" };
   }
@@ -260,37 +260,11 @@ export async function aiValidateDocument(practiceDocId: string) {
   const companyName = practiceDoc.practice.company.name;
   const docTypeName = practiceDoc.documentType.name;
 
-  // Richiamo Gemini (Google AI SDK integrato)
   const result = await validateDocumentWithAI(practiceDoc.filePath, docTypeName, companyName);
-
-  // Auto-aggiorniamo il documento e il log in base a `result.isValid`
-  const newStatus = result.isValid ? "APPROVED" : "REJECTED";
-  
-  await prisma.$transaction([
-    prisma.practiceDocument.update({
-      where: { id: practiceDocId },
-      data: {
-        status: newStatus,
-        rejectionReason: result.isValid ? null : `Rifiutato da AI: ${result.notes}`,
-        reviewedAt: new Date(),
-        reviewedById: userId, // Il consulente che ha triggerato la AI
-      },
-    }),
-    prisma.practiceActivity.create({
-      data: {
-        practiceId: practiceDoc.practiceId,
-        actorId: userId,
-        type: result.isValid ? "DOCUMENT_APPROVED" : "DOCUMENT_REJECTED",
-        detail: `[Controllo AI] ${result.isValid ? "Approvato" : "Rifiutato"}: ${docTypeName} - Note: ${result.notes}`,
-      },
-    }),
-  ]);
-
-  revalidateTag(cacheTags.counts(practiceDoc.practice.companyId));
 
   return {
     success: true,
-    status: newStatus,
-    notes: result.notes
+    isValid: result.isValid,
+    notes: result.notes,
   };
 }
