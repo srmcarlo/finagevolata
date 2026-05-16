@@ -40,8 +40,8 @@ export default function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) 
       setError(res.error);
       return;
     }
-    setInfo("Email verificata. Accedi con le tue credenziali.");
-    setTimeout(() => router.push("/login"), 1500);
+    setInfo("Email verificata. Reindirizzamento al login...");
+    window.location.assign("/login?verified=1");
   }
 
   async function handleResend() {

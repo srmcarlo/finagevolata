@@ -2,11 +2,18 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [justVerified, setJustVerified] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setJustVerified(new URLSearchParams(window.location.search).get("verified") === "1");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,6 +37,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-md">
         <h1 className="text-2xl font-bold text-center text-gray-900">Accedi a FinAgevolata</h1>
+        {justVerified && (
+          <p className="text-sm text-green-700 bg-green-50 p-3 rounded">
+            Email verificata. Ora puoi accedere con le tue credenziali.
+          </p>
+        )}
         {error && (
           <p className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</p>
         )}
