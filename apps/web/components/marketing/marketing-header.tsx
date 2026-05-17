@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
+import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/", label: "Home" },
   { href: "/features", label: "Funzionalità" },
   { href: "/prezzi", label: "Prezzi" },
   { href: "/contatti", label: "Contatti" },
@@ -13,6 +16,12 @@ const NAV = [
 
 export function MarketingHeader() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -24,7 +33,13 @@ export function MarketingHeader() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={cn(
+                "text-sm font-medium transition",
+                isActive(item.href)
+                  ? "text-indigo-600"
+                  : "text-slate-600 hover:text-slate-900",
+              )}
             >
               {item.label}
             </Link>
@@ -64,7 +79,11 @@ export function MarketingHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                aria-current={isActive(item.href) ? "page" : undefined}
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium hover:bg-slate-50",
+                  isActive(item.href) ? "bg-indigo-50 text-indigo-700" : "text-slate-700",
+                )}
                 onClick={() => setOpen(false)}
               >
                 {item.label}
