@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Check, FileCheck2, LayoutDashboard, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SparkleCta } from "./sparkle-cta";
 
 type Tone = "indigo" | "emerald";
 
@@ -161,13 +161,8 @@ export function PersonaCards() {
             <PersonaCard key={p.index} {...p} />
           ))}
         </div>
-        <div className="mt-10 text-center">
-          <Link
-            href="/register?plan=free"
-            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-          >
-            Prova gratis
-          </Link>
+        <div className="mt-10 flex justify-center">
+          <SparkleCta href="/register?plan=free" label="Prova gratis" />
         </div>
       </div>
     </section>
