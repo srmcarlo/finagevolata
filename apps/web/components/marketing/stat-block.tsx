@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface StatBlockProps {
   value: string;
@@ -8,7 +8,6 @@ interface StatBlockProps {
   source?: string;
 }
 
-// Parse `value` into [prefix, number, suffix]. Returns null if no parseable number.
 function parseValue(value: string): { prefix: string; number: number; suffix: string; decimals: number } | null {
   const match = value.match(/^(\D*)(\d+(?:[.,]\d+)?)(.*)$/);
   if (!match) return null;
@@ -25,12 +24,15 @@ function formatNumber(n: number, decimals: number): string {
 }
 
 export function StatBlock({ value, label, source }: StatBlockProps) {
-  const parsed = parseValue(value);
+  const parsed = useMemo(() => parseValue(value), [value]);
   const ref = useRef<HTMLDivElement | null>(null);
   const [display, setDisplay] = useState<string>(parsed ? `${parsed.prefix}0${parsed.suffix}` : value);
 
   useEffect(() => {
-    if (!parsed) return;
+    if (!parsed) {
+      setDisplay(value);
+      return;
+    }
     const node = ref.current;
     if (!node) return;
 
@@ -38,14 +40,13 @@ export function StatBlock({ value, label, source }: StatBlockProps) {
     let rafId: number | null = null;
 
     const animate = () => {
-      const duration = 1200;
+      const duration = 1400;
       const start = performance.now();
       const { prefix, number, suffix, decimals } = parsed;
 
       const step = (now: number) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
-        // ease-out cubic
         const eased = 1 - Math.pow(1 - progress, 3);
         const current = number * eased;
         setDisplay(`${prefix}${formatNumber(current, decimals)}${suffix}`);
@@ -61,7 +62,9 @@ export function StatBlock({ value, label, source }: StatBlockProps) {
 
     if (typeof IntersectionObserver === "undefined") {
       animate();
-      return;
+      return () => {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      };
     }
 
     const observer = new IntersectionObserver(
@@ -84,7 +87,7 @@ export function StatBlock({ value, label, source }: StatBlockProps) {
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [parsed]);
+  }, [parsed, value]);
 
   return (
     <div ref={ref} className="text-center">
