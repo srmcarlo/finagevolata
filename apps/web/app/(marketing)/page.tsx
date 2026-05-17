@@ -17,7 +17,6 @@ import { CtaBanner } from "@/components/marketing/cta-banner";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { NumbersStrip } from "@/components/marketing/numbers-strip";
 import { TestimonialGrid } from "@/components/marketing/testimonial-grid";
-import { TrustLogos } from "@/components/marketing/trust-logos";
 import { StickyMobileCta } from "@/components/marketing/sticky-mobile-cta";
 
 export const metadata: Metadata = {
@@ -193,8 +192,6 @@ export default function HomePage() {
       </section>
 
       <TestimonialGrid />
-
-      <TrustLogos />
 
       <section className="py-16">
         <div className="mx-auto max-w-4xl px-4 text-center lg:px-8">
