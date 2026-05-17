@@ -139,10 +139,7 @@ export function TestimonialSlider() {
     <section className="bg-white py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 lg:px-8">
         <div className="text-center">
-          <span className="inline-block rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium uppercase tracking-wider text-indigo-700">
-            Testimonial
-          </span>
-          <h2 className="mt-4 bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
+          <h2 className="bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-4xl">
             Cosa dicono i nostri beta tester
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600">
