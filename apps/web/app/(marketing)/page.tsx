@@ -10,7 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { HeroSection } from "@/components/marketing/hero-section";
-import { BridgeDiagram } from "@/components/marketing/bridge-diagram";
+import { CollaborationWorkflow } from "@/components/marketing/collaboration-workflow";
 import { StatBlock } from "@/components/marketing/stat-block";
 import { FeatureCard } from "@/components/marketing/feature-card";
 import { CtaBanner } from "@/components/marketing/cta-banner";
@@ -67,12 +67,16 @@ export default function HomePage() {
           }),
         }}
       />
-      <HeroSection visual={<BridgeDiagram />}>
+      <HeroSection visual={<CollaborationWorkflow />}>
         <div className="mb-4 inline-flex items-center gap-2 self-start rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
           <Sparkles className="size-3" /> Nuovo: integrazione MouseX Click Day
         </div>
         <h1 className="text-5xl font-bold tracking-tight text-slate-900 md:text-6xl lg:text-7xl">
-          La piattaforma dove consulenti e aziende lavorano <span className="text-indigo-600">insieme</span> sui bandi.
+          La piattaforma dove consulenti e aziende lavorano{" "}
+          <span className="animate-shimmer bg-gradient-to-r from-indigo-600 via-violet-500 to-blue-500 bg-clip-text text-transparent">
+            insieme
+          </span>{" "}
+          sui bandi.
         </h1>
         <p className="mt-6 text-lg text-slate-600 md:text-xl">
           Finanza agevolata senza Excel, senza email perse, senza documenti in ritardo.
