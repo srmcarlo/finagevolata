@@ -15,6 +15,10 @@ import { StatBlock } from "@/components/marketing/stat-block";
 import { FeatureCard } from "@/components/marketing/feature-card";
 import { CtaBanner } from "@/components/marketing/cta-banner";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { NumbersStrip } from "@/components/marketing/numbers-strip";
+import { TestimonialGrid } from "@/components/marketing/testimonial-grid";
+import { TrustLogos } from "@/components/marketing/trust-logos";
+import { StickyMobileCta } from "@/components/marketing/sticky-mobile-cta";
 
 export const metadata: Metadata = {
   title: "FinAgevolata — Piattaforma bandi per consulenti e aziende",
@@ -64,6 +68,9 @@ export default function HomePage() {
         }}
       />
       <HeroSection visual={<BridgeDiagram />}>
+        <div className="mb-4 inline-flex items-center gap-2 self-start rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+          <Sparkles className="size-3" /> Nuovo: integrazione MouseX Click Day
+        </div>
         <h1 className="text-5xl font-bold tracking-tight text-slate-900 md:text-6xl lg:text-7xl">
           La piattaforma dove consulenti e aziende lavorano <span className="text-indigo-600">insieme</span> sui bandi.
         </h1>
@@ -78,11 +85,20 @@ export default function HomePage() {
             Inizia gratis <ArrowRight className="size-4" />
           </Link>
           <Link
-            href="#come-funziona"
+            href="/contatti"
             className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:bg-slate-50"
           >
-            Vedi come funziona
+            Richiedi demo
           </Link>
+        </div>
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
+          <span>🇮🇹 100% italiano</span>
+          <span aria-hidden>•</span>
+          <span>🔒 GDPR</span>
+          <span aria-hidden>•</span>
+          <span>💳 Niente carta</span>
+          <span aria-hidden>•</span>
+          <span>✕ Cancelli quando vuoi</span>
         </div>
       </HeroSection>
 
@@ -100,6 +116,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      <NumbersStrip />
+
       <section id="come-funziona" className="bg-slate-50 py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4 lg:px-8">
           <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Come funziona</h2>
@@ -110,7 +128,7 @@ export default function HomePage() {
               { n: "2", title: "Checklist dinamica per bando", desc: "Il sistema dice cosa serve, entro quando. L'azienda carica, il consulente valida." },
               { n: "3", title: "Invio assistito, incluso Click Day", desc: "Pratica pronta → export MouseX. Velocità garantita nei Click Day critici." },
             ].map((s) => (
-              <div key={s.n} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div key={s.n} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
                 <div className="inline-flex size-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">{s.n}</div>
                 <h3 className="mt-4 text-lg font-semibold text-slate-900">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.desc}</p>
@@ -170,6 +188,10 @@ export default function HomePage() {
         </div>
       </section>
 
+      <TestimonialGrid />
+
+      <TrustLogos />
+
       <section className="py-16">
         <div className="mx-auto max-w-4xl px-4 text-center lg:px-8">
           <div className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-700 shadow-sm">
@@ -196,6 +218,8 @@ export default function HomePage() {
       </section>
 
       <CtaBanner title="Pronto a semplificare la gestione bandi?" subtitle="Inizia con il piano Free. Niente carta di credito, nessun commitment." />
+
+      <StickyMobileCta />
     </>
   );
 }
