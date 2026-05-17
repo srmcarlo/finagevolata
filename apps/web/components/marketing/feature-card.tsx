@@ -8,7 +8,7 @@ interface FeatureCardProps {
 
 export function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
   return (
-    <div className="group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+    <div className="group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
       <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
         <Icon className="size-5" />
       </div>

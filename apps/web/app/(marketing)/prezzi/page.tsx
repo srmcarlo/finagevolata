@@ -3,6 +3,7 @@ import { PricingTable } from "@/components/marketing/pricing-table";
 import { PricingComparison } from "@/components/marketing/pricing-comparison";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { CtaBanner } from "@/components/marketing/cta-banner";
+import { StickyMobileCta } from "@/components/marketing/sticky-mobile-cta";
 
 export const metadata: Metadata = {
   title: "Prezzi — FinAgevolata",
@@ -54,6 +55,8 @@ export default function PrezziPage() {
       </section>
 
       <CtaBanner title="Inizia oggi. Gratis." subtitle="Passa a un piano pagato solo quando ti serve." />
+
+      <StickyMobileCta />
     </>
   );
 }
