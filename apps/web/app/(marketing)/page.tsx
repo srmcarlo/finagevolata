@@ -17,6 +17,7 @@ import { CtaBanner } from "@/components/marketing/cta-banner";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { NumbersStrip } from "@/components/marketing/numbers-strip";
 import { TestimonialSlider } from "@/components/marketing/testimonial-slider";
+import { PersonaCards } from "@/components/marketing/persona-cards";
 import { StickyMobileCta } from "@/components/marketing/sticky-mobile-cta";
 
 export const metadata: Metadata = {
@@ -158,38 +159,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-slate-50 py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4 lg:px-8">
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-8">
-              <h3 className="text-2xl font-bold text-slate-900">Sei un consulente?</h3>
-              <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                <li className="flex gap-3"><span className="text-indigo-600">✓</span> Dashboard multi-cliente, N aziende, una sola vista</li>
-                <li className="flex gap-3"><span className="text-indigo-600">✓</span> Meno email, più pratiche chiuse</li>
-                <li className="flex gap-3"><span className="text-indigo-600">✓</span> Click Day integrato con partner MouseX</li>
-                <li className="flex gap-3"><span className="text-indigo-600">✓</span> Compliance automatica su documenti e scadenze</li>
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-8">
-              <h3 className="text-2xl font-bold text-slate-900">Sei un'azienda?</h3>
-              <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                <li className="flex gap-3"><span className="text-emerald-600">✓</span> Sai esattamente quale documento serve, quando</li>
-                <li className="flex gap-3"><span className="text-emerald-600">✓</span> Non perdi più nessuna scadenza</li>
-                <li className="flex gap-3"><span className="text-emerald-600">✓</span> Lavori nello stesso spazio del tuo consulente</li>
-                <li className="flex gap-3"><span className="text-emerald-600">✓</span> Massimizzi la probabilità di successo</li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-10 text-center">
-            <Link
-              href="/register?plan=free"
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-            >
-              Prova gratis
-            </Link>
-          </div>
-        </div>
-      </section>
+      <PersonaCards />
 
       <TestimonialSlider />
 
