@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CtaBanner } from "@/components/marketing/cta-banner";
+import { StickyMobileCta } from "@/components/marketing/sticky-mobile-cta";
 
 export const metadata: Metadata = {
   title: "Funzionalità — FinAgevolata",
@@ -79,6 +80,8 @@ export default function FeaturesPage() {
       </div>
 
       <CtaBanner title="Prova tutte le funzionalità gratis" subtitle="Piano Free senza carta di credito. Upgrade quando ti serve." />
+
+      <StickyMobileCta />
     </>
   );
 }
